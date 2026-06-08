@@ -42,6 +42,10 @@ declare global {
       getTabs: () => Promise<{ success: boolean; tabs?: any[]; error?: string }>
       saveTabs: (tabs: any[]) => Promise<{ success: boolean; error?: string }>
       clearTabs: () => Promise<{ success: boolean; error?: string }>
+      // context menu operations
+      showContextMenu: (params: any) => void
+      showInternalContextMenu: () => void
+      onOpenLinkInNewTab: (cb: (url: string) => void) => () => void
     }
   }
 }

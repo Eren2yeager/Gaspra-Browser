@@ -20,7 +20,7 @@ function getSearchUrl(searchEngine: string, query: string): string {
 }
 
 export default function NewTabPage() {
-  const { addTab } = useBrowser()
+  const { addTab, updateTab, activeTabId, tabs, setActiveTab } = useBrowser()
   const { settings } = useSettings()
   const [searchQuery, setSearchQuery] = useState('')
   const quickLinks = [
@@ -30,11 +30,30 @@ export default function NewTabPage() {
     { name: 'Twitter', url: 'https://twitter.com' },
   ]
 
+    const handleNavigate = (url: string) : void   => {
+    if (!activeTabId) return
+
+    // Check if it's an internal page (gaspra://) and not newtab
+    if (url.startsWith('gaspra://') && url !== 'gaspra://newtab') {
+      // Find existing tab with this URL
+      const existingTab = tabs.find(tab => tab.url === url)
+      if (existingTab) {
+        // Activate the existing tab instead of updating current
+        setActiveTab(existingTab.id)
+        return
+      }
+    }
+
+    // Update the active tab's state (updates the address bar)
+    updateTab(activeTabId, { url, requestedUrl: url, title: url })
+  }
+
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
       const searchUrl = getSearchUrl(settings?.defaultSearchEngine || 'google', searchQuery)
-      addTab(searchUrl)
+      handleNavigate(searchUrl)
     }
   }
 
@@ -83,7 +102,7 @@ export default function NewTabPage() {
             {quickLinks.map((link) => (
               <button
                 key={link.url}
-                onClick={() => addTab(link.url)}
+                onClick={() => handleNavigate(link.url)}
                 className="
                   flex flex-col items-center gap-2 p-4 rounded-lg
                   bg-muted/20 border border-border

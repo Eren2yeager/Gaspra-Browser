@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode, useRef } from 'react'
+import { createContext, useContext, useState, ReactNode, useRef, useEffect } from 'react'
+import { useSettings } from './SettingsContext'
 
 interface Tab {
   id: number
@@ -16,6 +17,7 @@ interface BrowserContextType {
   closeTab: (id: number) => void
   setActiveTab: (id: number) => void
   updateTab: (id: number, changes: Partial<Tab>) => void
+  reorderTabs: (fromIndex: number, toIndex: number) => void
   webviewRefs: React.MutableRefObject<Record<number, Electron.WebviewTag | null>>
 }
 
@@ -36,19 +38,99 @@ export function BrowserProvider({ children }: { children: ReactNode }) {
 
   const [activeTabId, setActiveTabId] = useState(1)
   const webviewRefs = useRef<Record<number, Electron.WebviewTag | null>>({})
+  const { settings } = useSettings()
+
+  // Load saved tabs on startup
+  useEffect(() => {
+    const loadSavedTabs = async () => {
+      if (settings?.saveTabsOnClose) {
+        const result = await window.browserAPI.getTabs()
+        if (result.success && result.tabs && result.tabs.length > 0) {
+          const loadedTabs: Tab[] = result.tabs.map((tab: any) => ({
+            id: Date.now() + Math.random(),
+            title: tab.title,
+            url: tab.url,
+            requestedUrl: tab.url,
+            isLoading: false,
+            canGoBack: false,
+            canGoForward: false
+          }))
+          setTabs(loadedTabs)
+          const activeTabIndex = result.tabs.findIndex((t: any) => t.isActive)
+          if (activeTabIndex !== -1) {
+            setActiveTabId(loadedTabs[activeTabIndex].id)
+          }
+        }
+      }
+    }
+    loadSavedTabs()
+  }, [settings?.saveTabsOnClose])
+
+  // Handle open link in new tab from context menu
+  useEffect(() => {
+    const unsubscribe = window.browserAPI.onOpenLinkInNewTab((url: string) => {
+      addTab(url)
+    })
+    return unsubscribe
+  }, [])
+
+  // Save tabs on unload
+  useEffect(() => {
+    const saveTabsBeforeClose = async () => {
+      if (settings?.saveTabsOnClose) {
+        const tabsToSave = tabs.map(tab => ({
+          id: tab.id.toString(),
+          url: tab.url,
+          title: tab.title,
+          isActive: tab.id === activeTabId,
+          position: tabs.indexOf(tab),
+          createdAt: new Date().toISOString()
+        }))
+        await window.browserAPI.saveTabs(tabsToSave)
+      }
+    }
+
+    window.addEventListener('beforeunload', saveTabsBeforeClose)
+    return () => {
+      window.removeEventListener('beforeunload', saveTabsBeforeClose)
+      saveTabsBeforeClose()
+    }
+  }, [tabs, activeTabId, settings?.saveTabsOnClose])
+
   const addTab = (url: string = 'gaspra://newtab') => {
+    // Check if it's an internal page (gaspra://) and not newtab
+    if (url.startsWith('gaspra://') && url !== 'gaspra://newtab') {
+      // Find existing tab with this URL
+      const existingTab = tabs.find(tab => tab.url === url)
+      if (existingTab) {
+        // Activate the existing tab instead of creating new
+        setActiveTabId(existingTab.id)
+        return
+      }
+    }
+
+    // If no existing tab found, create a new one
     const newTab: Tab = {
       id: Date.now(),
       title: url.startsWith('gaspra://') 
         ? url.replace('gaspra://', '').charAt(0).toUpperCase() + url.replace('gaspra://', '').slice(1) 
         : 'New Tab',
       url: url,
-      requestedUrl: url
-    , isLoading: false 
-    , canGoBack: false
-    , canGoForward: false
+      requestedUrl: url,
+      isLoading: false,
+      canGoBack: false,
+      canGoForward: false
     }
-    setTabs((prev) => [...prev, newTab])
+
+    if (settings?.openNewTabPosition === 'after current') {
+      const currentIndex = tabs.findIndex(tab => tab.id === activeTabId)
+      const newTabs = [...tabs]
+      newTabs.splice(currentIndex + 1, 0, newTab)
+      setTabs(newTabs)
+    } else {
+      setTabs((prev) => [...prev, newTab])
+    }
+
     setActiveTabId(newTab.id)
   }
 
@@ -80,9 +162,18 @@ export function BrowserProvider({ children }: { children: ReactNode }) {
     setTabs((prev) => prev.map((tab) => (tab.id === id ? { ...tab, ...changes } : tab)))
   }
 
+  const reorderTabs = (fromIndex: number, toIndex: number) => {
+    setTabs((prev) => {
+      const newTabs = [...prev]
+      const [movedTab] = newTabs.splice(fromIndex, 1)
+      newTabs.splice(toIndex, 0, movedTab)
+      return newTabs
+    })
+  }
+
   return (
     <BrowserContext.Provider
-      value={{ tabs, activeTabId, addTab, closeTab, setActiveTab, updateTab, webviewRefs }}
+      value={{ tabs, activeTabId, addTab, closeTab, setActiveTab, updateTab, reorderTabs, webviewRefs }}
     >
       {children}
     </BrowserContext.Provider>

@@ -1,22 +1,43 @@
 import { useBrowser } from '../../context/BrowserContext'
 import Tab from './Tab' 
 import { Plus } from 'lucide-react'
-import WindowControls from '../WindowControls/WindowControls'
+import { useState } from 'react'
+import WindowControls from '../../components/WindowControls/WindowControls'
 
 const TabBar = () => {
-  const { tabs, addTab } = useBrowser()
+  const { tabs, addTab, reorderTabs } = useBrowser()
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+  const handleDragStart = (index: number) => {
+    setDragIndex(index)
+  }
+
+  const handleDragOver = (index: number) => {
+    if (dragIndex !== null && dragIndex !== index) {
+      reorderTabs(dragIndex, index)
+      setDragIndex(index)
+    }
+  }
+
+  const handleDragEnd = () => {
+    setDragIndex(null)
+  }
 
   return (
     <div className="flex items-center w-full bg-muted/30 h-10 pl-2 pt-1 gap-1" style={{ WebkitAppRegion: 'drag' } as any}>
       {/* Tab List - No scrollbar, tabs shrink instead */}
       <div className="flex items-center flex gap-1 overflow-hidden" style={{ WebkitAppRegion: 'no-drag' } as any}>
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <Tab 
             key={tab.id} 
             id={tab.id} 
             title={tab.title} 
             url={tab.url} 
             isLoading={tab.isLoading}
+            index={index}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
           />
         ))}
       </div>
@@ -45,7 +66,7 @@ const TabBar = () => {
         onDoubleClick={() => window.browserAPI.toggleMaximizeWindow()}
       />
 
-      {/* <WindowControls /> */}
+      <WindowControls />
     </div>
   )
 }

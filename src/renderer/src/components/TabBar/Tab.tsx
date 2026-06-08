@@ -7,10 +7,13 @@ interface TabProps {
   title: string
   url: string
   isLoading: boolean
-  
+  index: number
+  onDragStart: (index: number) => void
+  onDragOver: (index: number) => void
+  onDragEnd: () => void
 }
 
-const Tab = ({ id, title, url, isLoading }: TabProps) : JSX.Element => {
+const Tab = ({ id, title, url, isLoading, index, onDragStart, onDragOver, onDragEnd }: TabProps) : JSX.Element => {
   const { setActiveTab, closeTab, activeTabId } = useBrowser()
 
   const isActive = activeTabId === id
@@ -50,7 +53,7 @@ const Tab = ({ id, title, url, isLoading }: TabProps) : JSX.Element => {
     <div className="flex items-center gap-1 flex-1 min-w-0">
       <div
         className={`
-        group relative flex items-center gap-1  p-1.5
+        group relative flex items-center gap-1  p-2 mb-1
         min-w-0 w-[200px] 
         rounded-md
         cursor-pointer select-none
@@ -63,6 +66,16 @@ const Tab = ({ id, title, url, isLoading }: TabProps) : JSX.Element => {
         }
       `}
         onClick={() => setActiveTab(id)}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('text/plain', index.toString())
+          onDragStart(index)
+        }}
+        onDragOver={(e) => {
+          e.preventDefault()
+          onDragOver(index)
+        }}
+        onDragEnd={onDragEnd}
       >
         {isLoading ? (
           <SpinnerCustom />

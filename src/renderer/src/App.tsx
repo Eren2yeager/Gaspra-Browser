@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import TabBar from './components/TabBar/TabBar'
 import Toolbar from './components/Toolbar/Toolbar'
 import WebView from './components/WebView/WebView'
@@ -11,6 +12,36 @@ import { SearchHistoryProvider } from './context/SearchHistoryContext'
 import { SettingsProvider } from './context/SettingsContext'
 
 function App() {
+  // Handle context menu for internal pages
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      // Check if the event originated from or is within a webview
+      let isWebview = false
+      let element = e.target as HTMLElement | null
+      while (element) {
+        if (element.tagName === 'WEBVIEW') {
+          isWebview = true
+          break
+        }
+        element = element.parentElement
+      }
+      
+      // Only handle internal pages (non-webview)
+      if (!isWebview) {
+        e.preventDefault()
+        window.browserAPI.showInternalContextMenu()
+      }
+    }
+
+    // Add event listener to the document
+    document.addEventListener('contextmenu', handleContextMenu)
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu)
+    }
+  }, [])
+
   return (
     <SettingsProvider>
       <BrowserProvider>

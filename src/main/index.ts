@@ -1,11 +1,200 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
-import { join } from 'path'
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu, MenuItem, net } from 'electron'
+import { join, basename } from 'path'
+import { createWriteStream } from 'fs'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 // db.ts import for database operations
 app.commandLine.appendSwitch('ignore-certificate-errors')
 import { dbOperations } from './db'
+
+// Function to create context menu for webviews
+function createContextMenu(event: Electron.IpcMainEvent, params: any) {
+  const menu = new Menu()
+  const win = BrowserWindow.fromWebContents(event.sender)
+
+  // Add items based on context
+  if (params.linkURL) {
+    menu.append(
+      new MenuItem({
+        label: 'Open Link in New Tab',
+        click: () => {
+          win?.webContents.send('open-link-in-new-tab', params.linkURL)
+        }
+      })
+    )
+    menu.append(
+      new MenuItem({
+        label: 'Copy Link Address',
+        click: async () => {
+          await shell.writeClipboardText(params.linkURL)
+        }
+      })
+    )
+    menu.append(new MenuItem({ type: 'separator' }))
+  }
+
+  // Check for media using either mediaURL or srcURL
+  const mediaUrl = params.mediaURL || params.srcURL
+  if (mediaUrl && params.mediaType === 'image') {
+    menu.append(
+      new MenuItem({
+        label: 'Open Image in New Tab',
+        click: () => {
+          win?.webContents.send('open-link-in-new-tab', mediaUrl)
+        }
+      })
+    )
+    menu.append(
+      new MenuItem({
+        label: 'Save Image As...',
+        click: () => {
+          // Use webContents to download the image, so it uses the existing download logic
+          event.sender.downloadURL(mediaUrl)
+        }
+      })
+    )
+    menu.append(new MenuItem({ type: 'separator' }))
+  }
+
+  if (params.hasSelectionText) {
+    menu.append(
+      new MenuItem({
+        label: 'Copy',
+        accelerator: 'CmdOrCtrl+C',
+        click: async () => {
+          await shell.writeClipboardText(params.selectionText)
+        }
+      })
+    )
+    menu.append(new MenuItem({ type: 'separator' }))
+  }
+
+  // Standard navigation items
+  menu.append(
+    new MenuItem({
+      label: 'Back',
+      accelerator: 'CmdOrCtrl+[',
+      enabled: params.canGoBack,
+      click: () => {
+        event.sender.goBack()
+      }
+    })
+  )
+  menu.append(
+    new MenuItem({
+      label: 'Forward',
+      accelerator: 'CmdOrCtrl+]',
+      enabled: params.canGoForward,
+      click: () => {
+        event.sender.goForward()
+      }
+    })
+  )
+  menu.append(
+    new MenuItem({
+      label: 'Reload',
+      accelerator: 'CmdOrCtrl+R',
+      click: () => {
+        event.sender.reload()
+      }
+    })
+  )
+  menu.append(new MenuItem({ type: 'separator' }))
+  menu.append(
+    new MenuItem({
+      label: 'Select All',
+      accelerator: 'CmdOrCtrl+A',
+      click: () => {
+        event.sender.selectAll()
+      }
+    })
+  )
+
+  // Dev tools in development
+  if (process.env.NODE_ENV === 'development') {
+    menu.append(new MenuItem({ type: 'separator' }))
+    menu.append(
+      new MenuItem({
+        label: 'Inspect Element',
+        accelerator: 'CmdOrCtrl+Shift+I',
+        click: () => {
+          event.sender.inspectElement(params.x, params.y)
+        }
+      })
+    )
+    menu.append(
+      new MenuItem({
+        label: 'Open DevTools',
+        click: () => {
+          event.sender.openDevTools()
+        }
+      })
+    )
+  }
+
+  menu.popup({ window: win! })
+}
+
+// Function to create context menu for internal pages
+function createInternalPageContextMenu(event: Electron.IpcMainEvent) {
+  const menu = new Menu()
+  const win = BrowserWindow.fromWebContents(event.sender)
+
+  // Cut, copy, paste, select all
+  menu.append(
+    new MenuItem({
+      label: 'Cut',
+      accelerator: 'CmdOrCtrl+X',
+      click: () => {
+        event.sender.cut()
+      }
+    })
+  )
+  menu.append(
+    new MenuItem({
+      label: 'Copy',
+      accelerator: 'CmdOrCtrl+C',
+      click: () => {
+        event.sender.copy()
+      }
+    })
+  )
+  menu.append(
+    new MenuItem({
+      label: 'Paste',
+      accelerator: 'CmdOrCtrl+V',
+      click: () => {
+        event.sender.paste()
+      }
+    })
+  )
+  menu.append(new MenuItem({ type: 'separator' }))
+  menu.append(
+    new MenuItem({
+      label: 'Select All',
+      accelerator: 'CmdOrCtrl+A',
+      click: () => {
+        event.sender.selectAll()
+      }
+    })
+  )
+
+  // Dev tools in development
+  if (process.env.NODE_ENV === 'development') {
+    menu.append(new MenuItem({ type: 'separator' }))
+    menu.append(
+      new MenuItem({
+        label: 'Open DevTools',
+        click: () => {
+          event.sender.openDevTools()
+        }
+      })
+    )
+  }
+
+  menu.popup({ window: win! })
+}
 
 const activeDownloads = new Map<string, Electron.DownloadItem>()
 const pausedDownloads = new Set<string>() // Tracks which downloads are paused
@@ -49,11 +238,17 @@ function createWindow(): void {
     let totalBytes = item.getTotalBytes()
     const url = item.getURL()
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const settings = dbOperations.getSettings()
 
-    // let user choose save location
-    const savePath = dialog.showSaveDialogSync(win, {
-      defaultPath: filename
-    })
+    // Determine save path
+    let savePath: string | undefined
+    if (settings.askWhereToSave) {
+      savePath = dialog.showSaveDialogSync(win, {
+        defaultPath: filename
+      })
+    } else {
+      savePath = join(settings.downloadPath, filename)
+    }
 
     if (!savePath) {
       item.cancel()
@@ -64,8 +259,10 @@ function createWindow(): void {
 
     item.setSavePath(savePath)
 
-    // save to db
-    dbOperations.addDownload(id, filename, url, savePath, totalBytes, 'progressing')
+    // Only save to database if setting is enabled
+    if (settings.saveDownloadHistory) {
+      dbOperations.addDownload(id, filename, url, savePath, totalBytes, 'progressing')
+    }
 
     // notify renderer — download started
     win.webContents.send('download-started', {
@@ -84,7 +281,9 @@ function createWindow(): void {
       if (!totalBytes || totalBytes === 0) {
         totalBytes = item.getTotalBytes()
       }
-      dbOperations.updateDownload(id, receivedBytes, state, totalBytes)
+      if (settings.saveDownloadHistory) {
+        dbOperations.updateDownload(id, receivedBytes, state, totalBytes)
+      }
       win.webContents.send('download-updated', { 
         id, 
         receivedBytes, 
@@ -96,7 +295,9 @@ function createWindow(): void {
     item.on('done', (_, state) => {
       const receivedBytes = item.getReceivedBytes()
       activeDownloads.delete(id)
-      dbOperations.updateDownload(id, receivedBytes, state, totalBytes)
+      if (settings.saveDownloadHistory) {
+        dbOperations.updateDownload(id, receivedBytes, state, totalBytes)
+      }
       win.webContents.send('download-done', { 
         id, 
         receivedBytes, 
@@ -121,6 +322,12 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  // Check hardware acceleration setting on startup
+  const initialSettings = dbOperations.getSettings()
+  if (!initialSettings.hardwareAcceleration) {
+    app.disableHardwareAcceleration()
+  }
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -372,6 +579,17 @@ app.whenReady().then(() => {
   ipcMain.handle('update-setting', (_event, key: string, value: any) => {
     try {
       dbOperations.updateSetting(key as any, value)
+      
+      // Notify user to restart if hardware acceleration setting changes
+      if (key === 'hardwareAcceleration') {
+        dialog.showMessageBox(mainWindow!, {
+          type: 'info',
+          title: 'Restart Required',
+          message: 'Hardware acceleration setting has changed. Please restart the browser for the changes to take effect.',
+          buttons: ['OK']
+        })
+      }
+      
       return { success: true }
     } catch (error: any) {
       console.error('Error updating setting:', error)
@@ -428,6 +646,26 @@ app.whenReady().then(() => {
       console.error('Error clearing tabs:', error)
       return { success: false, error: error.message }
     }
+  })
+
+  // Context menu handlers
+  ipcMain.on('show-context-menu', (event, params) => {
+    createContextMenu(event, params)
+  })
+
+  ipcMain.on('show-internal-context-menu', (event) => {
+    createInternalPageContextMenu(event)
+  })
+
+  // Handle webview context menu
+  app.on('web-contents-created', (event, contents) => {
+    // Check if this web contents is a webview (not the main window)
+    contents.on('context-menu', (event, params) => {
+      // Check if it's not the main window's web contents
+      if (mainWindow && contents.id !== mainWindow.webContents.id) {
+        createContextMenu({ sender: contents } as any, params)
+      }
+    })
   })
 
   createWindow()

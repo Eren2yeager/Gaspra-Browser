@@ -5,7 +5,7 @@ import { Clock, Trash2, Search, Globe } from 'lucide-react'
 
 export default function HistoryPage() {
   const { history, clearHistory } = useHistory()
-  const { activeTabId, updateTab, webviewRefs } = useBrowser()
+  const { activeTabId, updateTab, webviewRefs, tabs, setActiveTab } = useBrowser()
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredHistory = history.filter(
@@ -16,6 +16,18 @@ export default function HistoryPage() {
 
   const handleNavigate = (url: string) => {
     if (!activeTabId) return
+
+    // Check if it's an internal page (gaspra://) and not newtab
+    if (url.startsWith('gaspra://') && url !== 'gaspra://newtab') {
+      // Find existing tab with this URL
+      const existingTab = tabs.find(tab => tab.url === url)
+      if (existingTab) {
+        // Activate the existing tab instead of updating current
+        setActiveTab(existingTab.id)
+        return
+      }
+    }
+
     updateTab(activeTabId, { url, title: url })
     const webview = webviewRefs.current[activeTabId]
     if (webview) webview.loadURL(url)

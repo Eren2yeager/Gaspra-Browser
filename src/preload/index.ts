@@ -48,7 +48,15 @@ const browserAPI = {
   // tab operations
   getTabs: () => ipcRenderer.invoke('get-tabs'),
   saveTabs: (tabs: any[]) => ipcRenderer.invoke('save-tabs', tabs),
-  clearTabs: () => ipcRenderer.invoke('clear-tabs')
+  clearTabs: () => ipcRenderer.invoke('clear-tabs'),
+  // Context menu operations
+  showContextMenu: (params: any) => ipcRenderer.send('show-context-menu', params),
+  showInternalContextMenu: () => ipcRenderer.send('show-internal-context-menu'),
+  onOpenLinkInNewTab: (cb: (url: string) => void) => {
+    const listener = (_event: any, url: string) => cb(url)
+    ipcRenderer.on('open-link-in-new-tab', listener)
+    return () => ipcRenderer.off('open-link-in-new-tab', listener)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

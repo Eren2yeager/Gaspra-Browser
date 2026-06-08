@@ -43,7 +43,7 @@ const CircularProgress = ({ progress, size = 36 }: { progress: number; size?: nu
         strokeDasharray={circumference}
         strokeDashoffset={offset}
         strokeLinecap="round"
-        className="text-red-400 transition-all duration-300"
+        className="text-primary transition-all duration-300"
       />
     </svg>
   )

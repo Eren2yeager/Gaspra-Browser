@@ -36,7 +36,7 @@ function getSearchUrl(searchEngine: string, query: string): string {
 }
 
 const Toolbar = () => {
-  const { addTab, tabs, activeTabId, updateTab, webviewRefs } = useBrowser()
+  const { addTab, tabs, activeTabId, updateTab, webviewRefs, setActiveTab } = useBrowser()
   const { bookmarks, addBookmark, deleteBookmark, toggleSidebar } = useBookmark()
   const { searchHistory, addSearch, deleteSearch } = useSearchHistory()
   const { settings } = useSettings()
@@ -139,6 +139,20 @@ const Toolbar = () => {
       }
     }
 
+    // Check if it's an internal page (gaspra://) and not newtab
+    if (finalUrl.startsWith('gaspra://') && finalUrl !== 'gaspra://newtab') {
+      // Find existing tab with this URL
+      const existingTab = tabs.find(tab => tab.url === finalUrl)
+      if (existingTab) {
+        // Activate the existing tab instead of updating current
+        setActiveTab(existingTab.id)
+        setIsEditing(false)
+        setShowDropdown(false)
+        return
+      }
+    }
+
+    // If no existing tab found, update current tab
     updateTab(activeTab.id, { url: finalUrl, requestedUrl: finalUrl, title: finalUrl })
     setIsEditing(false)
     setShowDropdown(false)
@@ -176,21 +190,37 @@ const Toolbar = () => {
 
   const handleBack = () => {
     const webview = webviewRefs.current[activeTabId!]
-    if (webview && webview.canGoBack()) webview.goBack()
+    if (webview) {
+      try {
+        if (webview.canGoBack()) webview.goBack()
+      } catch (err) {
+        // Ignore errors
+      }
+    }
   }
 
   const handleForward = () => {
     const webview = webviewRefs.current[activeTabId!]
-    if (webview && webview.canGoForward()) webview.goForward()
+    if (webview) {
+      try {
+        if (webview.canGoForward()) webview.goForward()
+      } catch (err) {
+        // Ignore errors
+      }
+    }
   }
 
   const handleReload = () => {
     const webview = webviewRefs.current[activeTabId!]
     if (webview) {
-      if (webview.isLoading()) {
-        webview.stop()
-      } else {
-        webview.reload()
+      try {
+        if (webview.isLoading()) {
+          webview.stop()
+        } else {
+          webview.reload()
+        }
+      } catch (err) {
+        // Ignore errors
       }
     }
   }

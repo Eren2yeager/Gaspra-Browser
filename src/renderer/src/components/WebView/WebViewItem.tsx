@@ -11,7 +11,7 @@ type WebViewItemProps = {
 const WebViewItem = ({ tabId, url, isActive, onWebviewRef }: WebViewItemProps) => {
   const webviewRef = useRef<Electron.WebviewTag | null>(null)
   const [isDomReady, setIsDomReady] = useState(false)
-  const pendingUrlRef = useRef<string | null>(null)
+  const lastLoadedUrlRef = useRef<string | null>(null)
   const { settings } = useSettings()
 
   // Build webpreferences string
@@ -27,11 +27,6 @@ const WebViewItem = ({ tabId, url, isActive, onWebviewRef }: WebViewItemProps) =
       if (webviewEl) {
         const handleDomReady = () => {
           setIsDomReady(true)
-          // If there's a pending URL to navigate to, do it now
-          if (pendingUrlRef.current) {
-            webviewEl.loadURL(pendingUrlRef.current)
-            pendingUrlRef.current = null
-          }
         }
         ;(webviewEl as any)._onDomReady = handleDomReady
         webviewEl.addEventListener('dom-ready', handleDomReady)
@@ -51,28 +46,31 @@ const WebViewItem = ({ tabId, url, isActive, onWebviewRef }: WebViewItemProps) =
 
   // When URL changes, navigate the webview to the new URL
   useEffect(() => {
-    if (webviewRef.current && url) {
+    if (webviewRef.current && url && url !== lastLoadedUrlRef.current) {
       if (isDomReady) {
         try {
           const currentUrl = webviewRef.current.getURL()
           if (currentUrl !== url) {
             webviewRef.current.loadURL(url)
+            lastLoadedUrlRef.current = url
           }
         } catch (e) {
           // If getURL fails, just try to load URL anyway
-          webviewRef.current.loadURL(url)
+          try {
+            webviewRef.current.loadURL(url)
+            lastLoadedUrlRef.current = url
+          } catch (err) {
+            // If loadURL also fails, do nothing
+          }
         }
-      } else {
-        // If dom isn't ready yet, store it to be loaded later
-        pendingUrlRef.current = url
       }
     }
   }, [url, isDomReady])
 
   return (
     <webview
-      src={url}
       ref={setRef as any}
+      src={url}
       webpreferences={webPreferences}
       style={{
         display: isActive ? 'flex' : 'none',
