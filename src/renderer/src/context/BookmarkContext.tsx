@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useRef, useEffect } from 'react'
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 
 interface Bookmark {
   id: number

@@ -4,9 +4,11 @@ interface Tab {
   id: number
   title: string
   url: string
+  requestedUrl: string
   isLoading: boolean
+  canGoBack: boolean
+  canGoForward: boolean
 }
-
 interface BrowserContextType {
   tabs: Tab[]
   activeTabId: number
@@ -20,35 +22,53 @@ interface BrowserContextType {
 const BrowserContext = createContext<BrowserContextType | null>(null)
 
 export function BrowserProvider({ children }: { children: ReactNode }) {
-  const [tabs, setTabs] = useState<Tab[]>([{ id: 1, title: 'New Tab', url: 'https://google.com', isLoading: false }])
+  const [tabs, setTabs] = useState<Tab[]>([
+    {
+      id: 1,
+      title: 'New Tab',
+      url: 'gaspra://newtab',
+      requestedUrl: 'gaspra://newtab',
+      isLoading: false,
+      canGoBack: false,
+      canGoForward: false
+    }
+  ])
 
   const [activeTabId, setActiveTabId] = useState(1)
   const webviewRefs = useRef<Record<number, Electron.WebviewTag | null>>({})
-  const addTab = (url: string = 'https://google.com') => {
+  const addTab = (url: string = 'gaspra://newtab') => {
     const newTab: Tab = {
       id: Date.now(),
-      title: url.startsWith('gaspra://') ? url.replace('gaspra://', '') : 'New Tab',
-      url: url
+      title: url.startsWith('gaspra://') 
+        ? url.replace('gaspra://', '').charAt(0).toUpperCase() + url.replace('gaspra://', '').slice(1) 
+        : 'New Tab',
+      url: url,
+      requestedUrl: url
     , isLoading: false 
+    , canGoBack: false
+    , canGoForward: false
     }
-    setTabs([...tabs, newTab])
+    setTabs((prev) => [...prev, newTab])
     setActiveTabId(newTab.id)
   }
 
   const closeTab = (id: number) => {
     // remove the tab with this id from tabs
     // if it was the active tab, set the previous tab as active
-    const updatedTabs = tabs.filter((tab) => tab.id !== id)
-    setTabs(updatedTabs)
+    setTabs((prev) => {
+      const updatedTabs = prev.filter((tab) => tab.id !== id)
 
-    if (updatedTabs.length === 0) {
-      window.close()
-      return
-    }
+      if (updatedTabs.length === 0) {
+        window.close()
+        return updatedTabs
+      }
 
-    if (activeTabId === id) {
-      setActiveTabId(updatedTabs[updatedTabs.length - 1].id)
-    }
+      if (activeTabId === id) {
+        setActiveTabId(updatedTabs[updatedTabs.length - 1].id)
+      }
+
+      return updatedTabs
+    })
   }
 
   const setActiveTab = (id: number) => {
@@ -57,7 +77,7 @@ export function BrowserProvider({ children }: { children: ReactNode }) {
 
   const updateTab = (id: number, changes: Partial<Tab>) => {
     // find the tab with this id and merge changes into it
-    setTabs(tabs.map((tab) => (tab.id === id ? { ...tab, ...changes } : tab)))
+    setTabs((prev) => prev.map((tab) => (tab.id === id ? { ...tab, ...changes } : tab)))
   }
 
   return (

@@ -1,4 +1,4 @@
-import { contextBridge ,ipcRenderer} from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
@@ -9,6 +9,46 @@ const browserAPI = {
   addHistory: (title: string, url: string) => ipcRenderer.invoke('add-history', title, url),
   getHistory: () => ipcRenderer.invoke('get-history'),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
+  getDownloads: () => ipcRenderer.invoke('get-downloads'),
+  clearDownloads: () => ipcRenderer.invoke('clear-downloads'),
+  deleteDownload: (id: string) => ipcRenderer.invoke('delete-download', id),
+  openFile: (filePath: string) => ipcRenderer.invoke('open-file', filePath),
+  showInFolder: (filePath: string) => ipcRenderer.invoke('show-in-folder', filePath),
+  addSearch: (query: string) => ipcRenderer.invoke('add-search', query),
+  getSearchHistory: (limit?: number) => ipcRenderer.invoke('get-search-history', limit),
+  clearSearchHistory: () => ipcRenderer.invoke('clear-search-history'),
+  deleteSearch: (id: number) => ipcRenderer.invoke('delete-search', id),
+  onDownloadStarted: (cb: (data: any) => void) => {
+    const listener = (_event: any, data: any) => cb(data)
+    ipcRenderer.on('download-started', listener)
+    return () => ipcRenderer.off('download-started', listener)
+  },
+  onDownloadUpdated: (cb: (data: any) => void) => {
+    const listener = (_event: any, data: any) => cb(data)
+    ipcRenderer.on('download-updated', listener)
+    return () => ipcRenderer.off('download-updated', listener)
+  },
+  onDownloadDone: (cb: (data: any) => void) => {
+    const listener = (_event: any, data: any) => cb(data)
+    ipcRenderer.on('download-done', listener)
+    return () => ipcRenderer.off('download-done', listener)
+  },
+  pauseDownload: (id: string) => ipcRenderer.invoke('pause-download', id),
+  resumeDownload: (id: string) => ipcRenderer.invoke('resume-download', id),
+  cancelDownload: (id: string) => ipcRenderer.invoke('cancel-download', id),
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+  toggleMaximizeWindow: () => ipcRenderer.invoke('window-toggle-maximize'),
+  isWindowMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+  closeWindow: () => ipcRenderer.invoke('window-close'),
+  // settings operations
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  updateSetting: (key: string, value: any) => ipcRenderer.invoke('update-setting', key, value),
+  updateSettings: (partialSettings: any) => ipcRenderer.invoke('update-settings', partialSettings),
+  resetSettings: () => ipcRenderer.invoke('reset-settings'),
+  // tab operations
+  getTabs: () => ipcRenderer.invoke('get-tabs'),
+  saveTabs: (tabs: any[]) => ipcRenderer.invoke('save-tabs', tabs),
+  clearTabs: () => ipcRenderer.invoke('clear-tabs')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

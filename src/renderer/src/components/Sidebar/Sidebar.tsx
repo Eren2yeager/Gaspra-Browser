@@ -1,4 +1,4 @@
-import React, { useState, MouseEvent } from 'react'
+import { useState, MouseEvent, JSX } from 'react'
 import { useBookmark } from '../../context/BookmarkContext'
 import { useBrowser } from '../../context/BrowserContext'
 import { X, Search, Star, Globe, Trash2 } from 'lucide-react'
@@ -10,10 +10,10 @@ interface Bookmark {
   created_at: string
 }
 
-export default function Sidebar() {
+export default function Sidebar () : JSX.Element {
   const { isSidebarOpen, bookmarks, deleteBookmark, addBookmark, setIsSidebarOpen } = useBookmark()
 
-  const { activeTabId, tabs, updateTab, webviewRefs } = useBrowser()
+  const { activeTabId, tabs, updateTab } = useBrowser()
 
   // Local state for filtering bookmarks
   const [searchQuery, setSearchQuery] = useState('')
@@ -27,32 +27,25 @@ export default function Sidebar() {
       b.url.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleNavigate = (url: string) => {
+  const handleNavigate = (url: string) : void   => {
     if (!activeTabId) return
 
     // Update the active tab's state (updates the address bar)
-    updateTab(activeTabId, { url, title: url })
-
-    // Instruct the specific webview to load the new URL
-    const webview = webviewRefs.current[activeTabId]
-    if (webview) {
-      if (webview.isLoading()) webview.stop()
-      webview.loadURL(url)
-    }
+    updateTab(activeTabId, { url, requestedUrl: url, title: url })
   }
 
-  const handleAddCurrentPage = () => {
+  const handleAddCurrentPage = () : void => {
     if (activeTab) {
       addBookmark(activeTab.title || activeTab.url, activeTab.url)
     }
   }
 
-  const handleDelete = (event: MouseEvent<HTMLButtonElement>, id: number) => {
+  const handleDelete = (event: MouseEvent<HTMLButtonElement>, id: number) : void => {
     event.stopPropagation() // Prevent triggering the li onClick
     deleteBookmark(id)
   }
 
-  const handleClose = () => {
+  const handleClose = () : void =>  {
     setIsSidebarOpen(false)
   }
 
@@ -84,7 +77,7 @@ export default function Sidebar() {
         </div>
 
         {/* 2. Action Bar: Search and Add Button */}
-        <div className="py-3    bg-muted/20">
+        <div className="py-3">
           {/* Search Input */}
           <div className="relative">
             <Search
@@ -97,8 +90,8 @@ export default function Sidebar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="
-                w-full pl-8 pr-3 py-1.5 text-sm rounded-md border border-input bg-black/20
-                placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring
+                w-full pl-8 pr-3 py-1.5 text-sm rounded-md border border-input bg-muted
+                placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-muted
                 transition-all
               "
             />
@@ -167,12 +160,9 @@ export default function Sidebar() {
         <button
           onClick={handleAddCurrentPage}
           disabled={!activeTab}
-          className="
-              w-full flex items-center justify-center gap-2 p-4  mb-2
-              text-xs font-medium rounded-md 
-              bg-black/20 text-primary-foreground 
-              hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed
-              transition-colors
+            className="
+              flex items-center gap-2 w-full px-4 py-3 mb-3 rounded-full text-sm bg-muted text-foreground font-medium hover:bg-muted active:scale-95
+              text-destructive hover:bg-destructive/10 transition-all
             "
         >
           <Star size={14} fill="currentColor" />

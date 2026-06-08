@@ -61,10 +61,9 @@ export default function HistoryPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="
-            w-full pl-9 pr-4 py-2 text-sm rounded-md border border-input bg-black/20
-            bg-muted/30 placeholder:text-muted-foreground
-            focus:outline-none focus:ring-1 focus:ring-ring
-            transition-all
+            w-full pl-9 pr-4 py-2 text-sm rounded-full   bg-muted placeholder:text-muted-foreground
+            focus:outline-none focus:ring-[1px] focus:ring-muted
+   transition-all
           "
         />
       </div>

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { useSettings } from './SettingsContext'
 
 interface HistoryItem {
   id: number
@@ -18,6 +19,7 @@ const HistoryContext = createContext<HistoryContextType | null>(null)
 
 export function HistoryProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const { settings } = useSettings()
 
   const refreshHistory = async () => {
     try {
@@ -31,6 +33,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   }
 
   const addHistory = async (title: string, url: string) => {
+    if (!settings?.saveHistory) return // Don't save if setting is disabled
     try {
       const response = await window.browserAPI.addHistory(title, url)
       if (response.success) {
