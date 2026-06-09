@@ -153,13 +153,45 @@ function deleteBookmark(id: number) {
 
 //history operations
 function addHistory(title: string, url: string) {
-    const stmt = db.prepare('INSERT INTO history (title, url) VALUES (?, ?)');
-    stmt.run(title, url);
+    const stmt = db.prepare('INSERT INTO history (title, url, visited_at) VALUES (?, ?, ?)');
+    stmt.run(title, url, new Date().toISOString());
 }
 
 function getHistory(){
     const stmt =  db.prepare('SELECT * FROM history ORDER BY visited_at DESC')
     return stmt.all();
+}
+
+function getHistoryGroupedByDate() {
+    const stmt = db.prepare('SELECT * FROM history ORDER BY visited_at DESC');
+    const history = stmt.all() as any[];
+    
+    // Group by date
+    const grouped: Record<string, any[]> = {};
+    history.forEach(item => {
+        const date = new Date(item.visited_at).toDateString();
+        if (!grouped[date]) {
+            grouped[date] = [];
+        }
+        grouped[date].push(item);
+    });
+    
+    return grouped;
+}
+
+function searchHistory(query: string) {
+    const stmt = db.prepare(`
+        SELECT * FROM history 
+        WHERE title LIKE ? OR url LIKE ? 
+        ORDER BY visited_at DESC
+    `);
+    const searchTerm = `%${query}%`;
+    return stmt.all(searchTerm, searchTerm);
+}
+
+function deleteHistoryItem(id: number) {
+    const stmt = db.prepare('DELETE FROM history WHERE id = ?');
+    stmt.run(id);
 }
 
 function clearHistory() {
@@ -169,8 +201,8 @@ function clearHistory() {
 
 //download operations
 function addDownload(id: string, filename: string, url: string, savePath: string, totalBytes: number | null, state: string) {
-    const stmt = db.prepare('INSERT INTO downloads (id, filename, url, save_path, total_bytes, state) VALUES (?, ?, ?, ?, ?, ?)');
-    stmt.run(id, filename, url, savePath, totalBytes, state);
+    const stmt = db.prepare('INSERT INTO downloads (id, filename, url, save_path, total_bytes, state, started_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    stmt.run(id, filename, url, savePath, totalBytes, state, new Date().toISOString());
 }
 
 function updateDownload(id: string, receivedBytes: number, state: string, totalBytes?: number | null) {
@@ -186,6 +218,33 @@ function updateDownload(id: string, receivedBytes: number, state: string, totalB
 function getDownloads() {
     const stmt = db.prepare('SELECT * FROM downloads ORDER BY started_at DESC');
     return stmt.all();
+}
+
+function getDownloadsGroupedByDate() {
+    const stmt = db.prepare('SELECT * FROM downloads ORDER BY started_at DESC');
+    const downloads = stmt.all() as any[];
+    
+    // Group by date
+    const grouped: Record<string, any[]> = {};
+    downloads.forEach(item => {
+        const date = new Date(item.started_at).toDateString();
+        if (!grouped[date]) {
+            grouped[date] = [];
+        }
+        grouped[date].push(item);
+    });
+    
+    return grouped;
+}
+
+function searchDownloads(query: string) {
+    const stmt = db.prepare(`
+        SELECT * FROM downloads 
+        WHERE filename LIKE ? OR url LIKE ? 
+        ORDER BY started_at DESC
+    `);
+    const searchTerm = `%${query}%`;
+    return stmt.all(searchTerm, searchTerm);
 }
 
 function clearDownloads() {
@@ -311,10 +370,15 @@ export const dbOperations = {
     deleteBookmark,
     addHistory,
     getHistory,
+    getHistoryGroupedByDate,
+    searchHistory,
+    deleteHistoryItem,
     clearHistory,
     addDownload,
     updateDownload,
     getDownloads,
+    getDownloadsGroupedByDate,
+    searchDownloads,
     clearDownloads,
     deleteDownload,
     addSearch,

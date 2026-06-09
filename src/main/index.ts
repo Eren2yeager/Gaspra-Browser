@@ -1,6 +1,5 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Menu, MenuItem, net } from 'electron'
-import { join, basename } from 'path'
-import { createWriteStream } from 'fs'
+import { app, BrowserWindow, clipboard, ipcMain, dialog, shell, Menu, MenuItem } from 'electron'
+import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
@@ -27,7 +26,7 @@ function createContextMenu(event: Electron.IpcMainEvent, params: any) {
       new MenuItem({
         label: 'Copy Link Address',
         click: async () => {
-          await shell.writeClipboardText(params.linkURL)
+          await clipboard.writeText(params.linkURL)
         }
       })
     )
@@ -63,7 +62,7 @@ function createContextMenu(event: Electron.IpcMainEvent, params: any) {
         label: 'Copy',
         accelerator: 'CmdOrCtrl+C',
         click: async () => {
-          await shell.writeClipboardText(params.selectionText)
+           await clipboard.writeText((params.selectionText))
         }
       })
     )
@@ -239,6 +238,8 @@ function createWindow(): void {
     const url = item.getURL()
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const settings = dbOperations.getSettings()
+    let lastReceivedBytes = 0
+    let lastProgressTimestamp: number | null = null
 
     // Determine save path
     let savePath: string | undefined
@@ -272,11 +273,32 @@ function createWindow(): void {
       savePath,
       totalBytes,
       receivedBytes: 0,
+      bytesPerSecond: 0,
       state: 'progressing'
     })
 
     item.on('updated', (_, state) => {
       const receivedBytes = item.getReceivedBytes()
+      const now = Date.now()
+      let bytesPerSecond = 0
+
+      if (state === 'progressing') {
+        if (lastProgressTimestamp !== null) {
+          const elapsedMs = now - lastProgressTimestamp
+          const deltaBytes = receivedBytes - lastReceivedBytes
+
+          if (elapsedMs > 0 && deltaBytes >= 0) {
+            bytesPerSecond = Math.round((deltaBytes * 1000) / elapsedMs)
+          }
+        }
+
+        lastReceivedBytes = receivedBytes
+        lastProgressTimestamp = now
+      } else {
+        lastReceivedBytes = receivedBytes
+        lastProgressTimestamp = null
+      }
+
       // Update totalBytes if needed (sometimes it's only known after download starts)
       if (!totalBytes || totalBytes === 0) {
         totalBytes = item.getTotalBytes()
@@ -288,6 +310,7 @@ function createWindow(): void {
         id, 
         receivedBytes, 
         totalBytes: totalBytes || item.getTotalBytes(),
+        bytesPerSecond,
         state 
       })
     })
@@ -302,6 +325,7 @@ function createWindow(): void {
         id, 
         receivedBytes, 
         totalBytes: totalBytes || item.getTotalBytes(),
+        bytesPerSecond: 0,
         state 
       })
     })
@@ -399,6 +423,36 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('get-history-grouped', () => {
+    try {
+      const groupedHistory = dbOperations.getHistoryGroupedByDate()
+      return { success: true, groupedHistory }
+    } catch (error: any) {
+      console.error('Error fetching grouped history:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('search-history', (_event, query: string) => {
+    try {
+      const results = dbOperations.searchHistory(query)
+      return { success: true, results }
+    } catch (error: any) {
+      console.error('Error searching history:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('delete-history-item', (_event, id: number) => {
+    try {
+      dbOperations.deleteHistoryItem(id)
+      return { success: true }
+    } catch (error: any) {
+      console.error('Error deleting history item:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
   // download operations
   ipcMain.handle('get-downloads', () => {
     try {
@@ -428,6 +482,26 @@ app.whenReady().then(() => {
       return { success: true }
     } catch (error: any) {
       console.error('Error deleting download:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('get-downloads-grouped', () => {
+    try {
+      const groupedDownloads = dbOperations.getDownloadsGroupedByDate()
+      return { success: true, groupedDownloads }
+    } catch (error: any) {
+      console.error('Error fetching grouped downloads:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('search-downloads', (_, query: string) => {
+    try {
+      const results = dbOperations.searchDownloads(query)
+      return { success: true, results }
+    } catch (error: any) {
+      console.error('Error searching downloads:', error)
       return { success: false, error: error.message }
     }
   })
@@ -506,7 +580,7 @@ app.whenReady().then(() => {
       
       if (mainWindow) {
         mainWindow.webContents.send('download-updated', {
-          id, receivedBytes, totalBytes, state: 'paused' })
+          id, receivedBytes, totalBytes, bytesPerSecond: 0, state: 'paused' })
       }
     }
     return { success: true }
@@ -658,9 +732,9 @@ app.whenReady().then(() => {
   })
 
   // Handle webview context menu
-  app.on('web-contents-created', (event, contents) => {
+  app.on('web-contents-created', (_event, contents) => {
     // Check if this web contents is a webview (not the main window)
-    contents.on('context-menu', (event, params) => {
+    contents.on('context-menu', (_event, params) => {
       // Check if it's not the main window's web contents
       if (mainWindow && contents.id !== mainWindow.webContents.id) {
         createContextMenu({ sender: contents } as any, params)

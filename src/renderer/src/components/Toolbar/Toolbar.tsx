@@ -3,6 +3,8 @@ import { useBrowser } from '../../context/BrowserContext'
 import { useBookmark } from '../../context/BookmarkContext'
 import { useSearchHistory } from '../../context/SearchHistoryContext'
 import { useSettings } from '../../context/SettingsContext'
+import { useHistory } from '../../context/HistoryContext'
+import { useDownload } from '../../context/DownloadContext'
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,14 +14,32 @@ import {
   Lock,
   Star,
   Bookmark,
-  History,
   Home,
   Clock,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  History,
+  Download,
+  Plus,
+  MoreVertical,
+  Eraser,
+  Globe,
+  PanelLeft
 } from 'lucide-react'
 import DownloadBubble from '../DownloadBubble/DownloadBubble'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger
+} from '../ui/dropdown-menu'
 
-// Helper to get search URL from search engine
 function getSearchUrl(searchEngine: string, query: string): string {
   switch (searchEngine) {
     case 'google':
@@ -37,9 +57,11 @@ function getSearchUrl(searchEngine: string, query: string): string {
 
 const Toolbar = () => {
   const { addTab, tabs, activeTabId, updateTab, webviewRefs, setActiveTab } = useBrowser()
-  const { bookmarks, addBookmark, deleteBookmark, toggleSidebar } = useBookmark()
-  const { searchHistory, addSearch, deleteSearch } = useSearchHistory()
-  const { settings } = useSettings()
+  const { bookmarks, addBookmark, deleteBookmark, toggleSidebar, isSidebarOpen } = useBookmark()
+  const { searchHistory, addSearch, clearSearchHistory, deleteSearch } = useSearchHistory()
+  const { settings, updateSetting, resetSettings } = useSettings()
+  const { clearHistory } = useHistory()
+  const { clearDownloads } = useDownload()
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId)
 
@@ -51,7 +73,6 @@ const Toolbar = () => {
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Sync local input value with active tab URL, empty on newtab
   useEffect(() => {
     if (activeTab) {
       if (activeTab.url === 'gaspra://newtab') {
@@ -62,7 +83,6 @@ const Toolbar = () => {
     }
   }, [activeTab?.id, activeTab?.url])
 
-  // Focus input when entering edit mode
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus()
@@ -71,26 +91,16 @@ const Toolbar = () => {
     }
   }, [isEditing])
 
-  // Close dropdown when input loses focus (and click is not on dropdown)
   const handleInputBlur = () => {
-    // Use setTimeout to check if focus moved to dropdown before closing
     setTimeout(() => {
       const isFocusOnDropdown = dropdownRef.current?.contains(document.activeElement)
       if (!isFocusOnDropdown) {
         setShowDropdown(false)
         setIsEditing(false)
-        if (activeTab) {
-          if (activeTab.url === 'gaspra://newtab') {
-            setInputValue('')
-          } else {
-            setInputValue(activeTab.url)
-          }
-        }
       }
     }, 150)
   }
 
-  // Keyboard Shortcuts (Ctrl+L or F6)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
@@ -106,25 +116,26 @@ const Toolbar = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // --- Bookmark Logic ---
   const currentBookmark = activeTab ? bookmarks.find((b) => b.url === activeTab.url) : null
   const isBookmarked = !!currentBookmark
 
   const handleToggleBookmark = () => {
     if (!activeTab) return
 
-    if (isBookmarked) {
+    if (isBookmarked && currentBookmark) {
       deleteBookmark(currentBookmark.id)
     } else {
       addBookmark(activeTab.title || activeTab.url, activeTab.url)
     }
   }
-  // ----------------------
 
-  // Filter search history based on input
-  const filteredHistory = searchHistory.filter(item =>
+  const filteredHistory = searchHistory.filter((item) =>
     item.query.toLowerCase().includes(inputValue.toLowerCase())
   )
+
+  const openInternalPage = (path: 'history' | 'downloads' | 'settings') => {
+    addTab(`gaspra://${path}`)
+  }
 
   const handleNavigation = async (url: string) => {
     if (!activeTab) return
@@ -134,17 +145,14 @@ const Toolbar = () => {
       if (url.includes('.') && !url.includes(' ')) {
         finalUrl = `https://${url}`
       } else {
-        await addSearch(url) // Save search query to history
+        await addSearch(url)
         finalUrl = getSearchUrl(settings?.defaultSearchEngine || 'google', url)
       }
     }
 
-    // Check if it's an internal page (gaspra://) and not newtab
     if (finalUrl.startsWith('gaspra://') && finalUrl !== 'gaspra://newtab') {
-      // Find existing tab with this URL
-      const existingTab = tabs.find(tab => tab.url === finalUrl)
+      const existingTab = tabs.find((tab) => tab.url === finalUrl)
       if (existingTab) {
-        // Activate the existing tab instead of updating current
         setActiveTab(existingTab.id)
         setIsEditing(false)
         setShowDropdown(false)
@@ -152,7 +160,6 @@ const Toolbar = () => {
       }
     }
 
-    // If no existing tab found, update current tab
     updateTab(activeTab.id, { url: finalUrl, requestedUrl: finalUrl, title: finalUrl })
     setIsEditing(false)
     setShowDropdown(false)
@@ -177,14 +184,10 @@ const Toolbar = () => {
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelectedIndex(prev =>
-        prev < filteredHistory.length - 1 ? prev + 1 : 0
-      )
+      setSelectedIndex((prev) => (prev < filteredHistory.length - 1 ? prev + 1 : 0))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setSelectedIndex(prev =>
-        prev > 0 ? prev - 1 : filteredHistory.length - 1
-      )
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredHistory.length - 1))
     }
   }
 
@@ -193,7 +196,7 @@ const Toolbar = () => {
     if (webview) {
       try {
         if (webview.canGoBack()) webview.goBack()
-      } catch (err) {
+      } catch (_err) {
         // Ignore errors
       }
     }
@@ -204,7 +207,7 @@ const Toolbar = () => {
     if (webview) {
       try {
         if (webview.canGoForward()) webview.goForward()
-      } catch (err) {
+      } catch (_err) {
         // Ignore errors
       }
     }
@@ -219,7 +222,7 @@ const Toolbar = () => {
         } else {
           webview.reload()
         }
-      } catch (err) {
+      } catch (_err) {
         // Ignore errors
       }
     }
@@ -234,7 +237,6 @@ const Toolbar = () => {
 
   return (
     <div className="flex items-center gap-2 px-2 py-2 bg-background">
-      {/* Sidebar Toggle & Navigation Controls */}
       <div className="flex items-center gap-1">
         <NavButton
           disabled={!activeTab.canGoBack}
@@ -248,34 +250,26 @@ const Toolbar = () => {
           icon={<ArrowRight size={18} />}
           label="Forward"
         />
-
         <NavButton
-          onClick={handleReload} 
+          onClick={handleReload}
           icon={activeTab.isLoading ? <X size={16} /> : <RotateCw size={16} />}
           label="Reload"
         />
-        <NavButton
-          onClick={handleHome}
-          icon={<Home size={16} />}
-          label="Home"
-        />
+        <NavButton onClick={handleHome} icon={<Home size={16} />} label="Home" />
       </div>
 
-      {/* Address Bar */}
-      <div className="flex-1 flex items-center relative">
+      <div className="flex-1 min-w-0 flex items-center relative">
         <div
           className={`
-            relative flex-1 flex items-center gap-2 px-3 py-1.5 rounded-full border-none bg-background outline-none  transition-all truncate
+            relative flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded-full border-none bg-background outline-none transition-all
             ${
               isEditing
-                ? 'bg-background border-primary shadow-sm '
-                : 'bg-muted/50 border-transparent hover:bg-muted hover:border-input cursor-text'
+                ? 'bg-background border-primary shadow-sm bg-muted '
+                : 'bg-muted/50 border-transparent hover:bg-muted hover:border-input'
             }
-        
           `}
           onClick={() => !isEditing && setIsEditing(true)}
         >
-          {/* Icon: Lock or Search */}
           <div className="text-muted-foreground flex-shrink-0">
             {isEditing ? (
               <Search size={14} />
@@ -286,7 +280,6 @@ const Toolbar = () => {
             )}
           </div>
 
-          {/* Input / Display Text */}
           {isEditing ? (
             <input
               ref={inputRef}
@@ -296,18 +289,17 @@ const Toolbar = () => {
               onKeyDown={handleKeyDown}
               onFocus={() => setShowDropdown(true)}
               onBlur={handleInputBlur}
-              className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
+              className="flex-1 min-w-0 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
               placeholder="Search or enter website name"
             />
           ) : (
-            <div className="flex-1 text-sm text-foreground truncate select-none">
+            <div className="flex-1 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground select-none">
               {activeTab.url === 'gaspra://newtab'
                 ? 'Search or enter website name'
                 : activeTab.url.replace(/^https?:\/\//, '')}
             </div>
           )}
 
-          {/* Clear Input Button (only when editing and input has value) */}
           {isEditing && inputValue.length > 0 && (
             <button
               onClick={(e) => {
@@ -322,7 +314,6 @@ const Toolbar = () => {
             </button>
           )}
 
-          {/* Bookmark Star Button */}
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -344,7 +335,6 @@ const Toolbar = () => {
           </button>
         </div>
 
-        {/* Search History Dropdown */}
         {isEditing && showDropdown && filteredHistory.length > 0 && (
           <div
             ref={dropdownRef}
@@ -383,23 +373,183 @@ const Toolbar = () => {
         )}
       </div>
 
-      <NavButton onClick={toggleSidebar} icon={<Bookmark size={18} />} label="Toggle Sidebar" />
-        <NavButton
-          onClick={() => addTab('gaspra://history')}
-          icon={<History size={18} />}
-          label="History"
-        />
-        <NavButton
-          onClick={() => addTab('gaspra://settings')}
-          icon={<SettingsIcon size={18} />}
-          label="Settings"
-        />
-        <DownloadBubble />
+      <DownloadBubble />
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="p-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="Browser menu"
+            title="Browser menu"
+          >
+            <MoreVertical size={18} />
+          </button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-72">
+          <DropdownMenuLabel>Browser Menu</DropdownMenuLabel>
+
+          <DropdownMenuItem onClick={() => addTab()}>
+            <Plus />
+            New tab
+            <DropdownMenuShortcut>Ctrl+T</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleHome}>
+            <Home />
+            Go to homepage
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openInternalPage('downloads')}>
+            <Download />
+            Downloads
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openInternalPage('history')}>
+            <History />
+            History
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openInternalPage('settings')}>
+            <SettingsIcon />
+            Settings
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuCheckboxItem checked={isSidebarOpen} onCheckedChange={toggleSidebar}>
+            {/* <PanelLeft /> */}
+            Show bookmarks sidebar
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem checked={isBookmarked} onCheckedChange={handleToggleBookmark}>
+            {/* <Bookmark /> */}
+            Bookmark this page
+          </DropdownMenuCheckboxItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Globe />
+              Search engine
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuCheckboxItem
+                checked={settings?.defaultSearchEngine === 'google'}
+                onCheckedChange={() => updateSetting('defaultSearchEngine', 'google')}
+              >
+                Google
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.defaultSearchEngine === 'bing'}
+                onCheckedChange={() => updateSetting('defaultSearchEngine', 'bing')}
+              >
+                Bing
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.defaultSearchEngine === 'duckduckgo'}
+                onCheckedChange={() => updateSetting('defaultSearchEngine', 'duckduckgo')}
+              >
+                DuckDuckGo
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.defaultSearchEngine === 'yahoo'}
+                onCheckedChange={() => updateSetting('defaultSearchEngine', 'yahoo')}
+              >
+                Yahoo
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <SettingsIcon />
+              Quick settings
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-64">
+              <DropdownMenuCheckboxItem
+                checked={settings?.saveHistory ?? false}
+                onCheckedChange={(checked) => updateSetting('saveHistory', checked)}
+              >
+                Save browsing history
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.saveSearchHistory ?? false}
+                onCheckedChange={(checked) => updateSetting('saveSearchHistory', checked)}
+              >
+                Save search history
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.saveDownloadHistory ?? false}
+                onCheckedChange={(checked) => updateSetting('saveDownloadHistory', checked)}
+              >
+                Save download history
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.askWhereToSave ?? false}
+                onCheckedChange={(checked) => updateSetting('askWhereToSave', checked)}
+              >
+                Ask where to save files
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.saveTabsOnClose ?? false}
+                onCheckedChange={(checked) => updateSetting('saveTabsOnClose', checked)}
+              >
+                Restore tabs on reopen
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.blockPopups ?? false}
+                onCheckedChange={(checked) => updateSetting('blockPopups', checked)}
+              >
+                Block popups
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.enableJavaScript ?? false}
+                onCheckedChange={(checked) => updateSetting('enableJavaScript', checked)}
+              >
+                Enable JavaScript
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.enableImages ?? false}
+                onCheckedChange={(checked) => updateSetting('enableImages', checked)}
+              >
+                Load images
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={settings?.hardwareAcceleration ?? false}
+                onCheckedChange={(checked) => updateSetting('hardwareAcceleration', checked)}
+              >
+                Hardware acceleration
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Eraser />
+              Clear browsing data
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              <DropdownMenuItem onClick={() => clearHistory()}>
+                Clear history
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => clearSearchHistory()}>
+                Clear search history
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => clearDownloads()}>
+                Clear download history
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuItem onClick={() => resetSettings()}>
+            <SettingsIcon />
+            Reset all settings
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
 
-// Helper Component for Nav Buttons
 const NavButton = ({
   onClick,
   icon,
@@ -415,8 +565,8 @@ const NavButton = ({
     onClick={onClick}
     disabled={disabled}
     className="
-      p-2 rounded-md text-muted-foreground 
-      hover:bg-accent hover:text-accent-foreground 
+      p-2 rounded-md text-muted-foreground
+      hover:bg-accent hover:text-accent-foreground
       disabled:opacity-30
       transition-colors duration-200
       focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring

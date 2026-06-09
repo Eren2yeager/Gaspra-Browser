@@ -9,8 +9,13 @@ declare global {
       deleteBookmark: (id: number) => Promise<{ success: boolean; error?: string }>
       addHistory: (title: string, url: string) => Promise<{ success: boolean; error?: string }>
       getHistory: () => Promise<{ success: boolean; history?: any[]; error?: string }>
+      getHistoryGrouped: () => Promise<{ success: boolean; groupedHistory?: Record<string, any[]>; error?: string }>
+      searchHistory: (query: string) => Promise<{ success: boolean; results?: any[]; error?: string }>
+      deleteHistoryItem: (id: number) => Promise<{ success: boolean; error?: string }>
       clearHistory: () => Promise<{ success: boolean; error?: string }>
       getDownloads: () => Promise<{ success: boolean; downloads?: any[]; error?: string }>
+      getDownloadsGrouped: () => Promise<{ success: boolean; groupedDownloads?: Record<string, any[]>; error?: string }>
+      searchDownloads: (query: string) => Promise<{ success: boolean; results?: any[]; error?: string }>
       clearDownloads: () => Promise<{ success: boolean; error?: string }>
       deleteDownload: (id: string) => Promise<{ success: boolean; error?: string }>
       openFile: (filePath: string) => Promise<{ success: boolean; error?: string }>

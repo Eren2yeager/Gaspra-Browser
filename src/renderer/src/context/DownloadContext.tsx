@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 
 interface Download {
   id: string
@@ -7,30 +7,58 @@ interface Download {
   save_path: string
   total_bytes: number | null
   received_bytes: number
+  bytes_per_second: number
   state: string
   started_at: string
 }
 
 interface DownloadContextType {
   downloads: Download[]
+  groupedDownloads: Record<string, Download[]>
   clearDownloads: () => Promise<void>
   refreshDownloads: () => Promise<void>
   pauseDownload: (id: string) => Promise<void>
   resumeDownload: (id: string) => Promise<void>
   cancelDownload: (id: string) => Promise<void>
   deleteDownload: (id: string) => Promise<void>
+  searchDownloads: (query: string) => Promise<Download[]>
+}
+
+// Helper function to group downloads by date
+const groupDownloadsByDate = (downloads: Download[]): Record<string, Download[]> => {
+  const grouped: Record<string, Download[]> = {}
+  downloads.forEach(download => {
+    const date = new Date(download.started_at).toDateString()
+    if (!grouped[date]) {
+      grouped[date] = []
+    }
+    grouped[date].push(download)
+  })
+  return grouped
 }
 
 const DownloadContext = createContext<DownloadContextType | null>(null)
 
 export function DownloadProvider({ children }: { children: ReactNode }) {
   const [downloads, setDownloads] = useState<Download[]>([])
+  const [groupedDownloads, setGroupedDownloads] = useState<Record<string, Download[]>>({})
+
+  const updateDownloadsAndGrouped = useCallback((newDownloads: Download[] | ((prev: Download[]) => Download[])) => {
+    setDownloads((prev) => {
+      const updatedDownloads = typeof newDownloads === 'function' 
+        ? newDownloads(prev) 
+        : newDownloads
+      setGroupedDownloads(groupDownloadsByDate(updatedDownloads))
+      return updatedDownloads
+    })
+  }, [])
 
   const refreshDownloads = async () => {
     try {
       const response = await window.browserAPI.getDownloads()
       if (response.success) {
-        setDownloads(response.downloads as Download[] ?? [])
+        const fetchedDownloads = response.downloads as Download[] ?? []
+        updateDownloadsAndGrouped(fetchedDownloads)
       }
     } catch (error) {
       console.error('Error fetching downloads:', error)
@@ -41,7 +69,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     try {
       const response = await window.browserAPI.clearDownloads()
       if (response.success) {
-        setDownloads([])
+        updateDownloadsAndGrouped([])
       }
     } catch (error) {
       console.error('Error clearing downloads:', error)
@@ -75,10 +103,24 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const deleteDownload = async (id: string) => {
     try {
       await window.browserAPI.deleteDownload(id)
-      // Also remove from local state immediately for better UX!
-      setDownloads(prev => prev.filter(d => d.id !== id))
+      // Update locally immediately
+      updateDownloadsAndGrouped((prev) => prev.filter(d => d.id !== id))
     } catch (error) {
       console.error('Error deleting download:', error)
+    }
+  }
+
+  const searchDownloads = async (query: string): Promise<Download[]> => {
+    if (!query.trim()) return []
+    try {
+      const response = await window.browserAPI.searchDownloads(query)
+      if (response.success) {
+        return response.results as Download[] ?? []
+      }
+      return []
+    } catch (error) {
+      console.error('Error searching downloads:', error)
+      return []
     }
   }
 
@@ -95,20 +137,22 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         save_path: data.savePath,
         total_bytes: data.totalBytes,
         received_bytes: data.receivedBytes,
+        bytes_per_second: data.bytesPerSecond ?? 0,
         state: data.state,
         started_at: new Date().toISOString()
       }
-      setDownloads((prev) => [newDownload, ...prev])
+      updateDownloadsAndGrouped((prev) => [newDownload, ...prev])
     })
 
     const cleanupUpdated = window.browserAPI.onDownloadUpdated((data) => {
-      setDownloads((prev) =>
+      updateDownloadsAndGrouped((prev) =>
         prev.map((download) =>
           download.id === data.id
             ? { 
                 ...download, 
                 received_bytes: data.receivedBytes, 
                 total_bytes: data.totalBytes ?? download.total_bytes,
+                bytes_per_second: data.bytesPerSecond ?? 0,
                 state: data.state 
               }
             : download
@@ -117,13 +161,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     })
 
     const cleanupDone = window.browserAPI.onDownloadDone((data) => {
-      setDownloads((prev) =>
+      updateDownloadsAndGrouped((prev) =>
         prev.map((download) =>
           download.id === data.id
             ? { 
                 ...download, 
                 received_bytes: data.receivedBytes, 
                 total_bytes: data.totalBytes ?? download.total_bytes,
+                bytes_per_second: data.bytesPerSecond ?? 0,
                 state: data.state 
               }
             : download
@@ -137,17 +182,19 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       cleanupUpdated()
       cleanupDone()
     }
-  }, [])
+  }, [updateDownloadsAndGrouped])
 
   return (
     <DownloadContext.Provider value={{ 
       downloads, 
+      groupedDownloads,
       clearDownloads, 
       refreshDownloads,
       pauseDownload,
       resumeDownload,
       cancelDownload,
-      deleteDownload
+      deleteDownload,
+      searchDownloads
     }}>
       {children}
     </DownloadContext.Provider>

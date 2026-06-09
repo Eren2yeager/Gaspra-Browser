@@ -20,7 +20,7 @@ function getSearchUrl(searchEngine: string, query: string): string {
 }
 
 export default function NewTabPage() {
-  const { addTab, updateTab, activeTabId, tabs, setActiveTab } = useBrowser()
+  const {  updateTab, activeTabId, tabs, setActiveTab } = useBrowser()
   const { settings } = useSettings()
   const [searchQuery, setSearchQuery] = useState('')
   const quickLinks = [
