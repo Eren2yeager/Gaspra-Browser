@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Search, Plus, ArrowRight } from 'lucide-react'
+import { Search, ArrowRight } from 'lucide-react'
 import { useBrowser } from '../../context/BrowserContext'
 import { useSettings } from '../../context/SettingsContext'
+import browserIcon from '../../assets/icon.png'
 
 // Helper to get search URL from search engine
 function getSearchUrl(searchEngine: string, query: string): string {
@@ -24,10 +25,10 @@ export default function NewTabPage() {
   const { settings } = useSettings()
   const [searchQuery, setSearchQuery] = useState('')
   const quickLinks = [
-    { name: 'Google', url: 'https://www.google.com' },
-    { name: 'YouTube', url: 'https://www.youtube.com' },
-    { name: 'GitHub', url: 'https://github.com' },
-    { name: 'Twitter', url: 'https://twitter.com' },
+    { name: 'Google', url: 'https://www.google.com' , favicon: 'https://www.google.com/s2/favicons?domain=google.com&sz=32'},
+    { name: 'YouTube', url: 'https://www.youtube.com' , favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32'},
+    { name: 'GitHub', url: 'https://github.com' , favicon: 'https://www.google.com/s2/favicons?domain=github.com&sz=32'},
+    { name: 'Twitter', url: 'https://twitter.com' , favicon: 'https://www.google.com/s2/favicons?domain=twitter.com&sz=32'},
   ]
 
     const handleNavigate = (url: string) : void   => {
@@ -59,7 +60,8 @@ export default function NewTabPage() {
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-background text-foreground">
-      <h1 className="text-4xl font-bold mb-8">Gaspra Browser</h1>
+      <img src={browserIcon} alt="Gaspra Browser Logo" className="w-24 h-24 mb-4" />
+      <h1 className="text-3xl font-bold mb-8">Gaspra Browser</h1>
       <div className="w-full max-w-xl px-6">
         <form onSubmit={handleSearch} className="w-full">
           <div className="relative w-full">
@@ -97,7 +99,7 @@ export default function NewTabPage() {
         </form>
 
         <div className="mt-12">
-          <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">Quick Links</h3>
+          {/* <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">Quick Links</h3> */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {quickLinks.map((link) => (
               <button
@@ -105,13 +107,13 @@ export default function NewTabPage() {
                 onClick={() => handleNavigate(link.url)}
                 className="
                   flex flex-col items-center gap-2 p-4 rounded-lg
-                  bg-muted/20 border border-border
+                  
                   hover:bg-muted/40 hover:border-primary/30
                   transition-all
                 "
               >
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Plus size={20} className="text-primary" />
+                  <img src={link.favicon} alt={`${link.name} favicon`} className="w-5 h-5" />
                 </div>
                 <span className="text-sm font-medium">{link.name}</span>
               </button>

@@ -26,7 +26,7 @@ const TabBar = () => {
   return (
     <div className="flex items-center w-full bg-muted/30 h-10 pl-2 pt-1 gap-1" style={{ WebkitAppRegion: 'drag' } as any}>
       {/* Tab List - No scrollbar, tabs shrink instead */}
-      <div className="flex items-center flex gap-1 overflow-hidden" style={{ WebkitAppRegion: 'no-drag' } as any}>
+      <div className="flex items-center gap-1 overflow-hidden" style={{ WebkitAppRegion: 'no-drag' } as any}>
         {tabs.map((tab, index) => (
           <Tab 
             key={tab.id} 
