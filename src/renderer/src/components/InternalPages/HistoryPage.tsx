@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useHistory } from '../../context/HistoryContext'
 import { useBrowser } from '../../context/BrowserContext'
 import { Clock, Trash2, Search, Globe, X, CheckSquare, Square } from 'lucide-react'
+import {AppIcon} from '../CustomIcons/AppIcon'
 
 export default function HistoryPage() {
   const { groupedHistory, clearHistory, deleteHistoryItem } = useHistory()
@@ -160,7 +161,7 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Clock size={24} className="text-muted-foreground" />
+            <AppIcon size={50} className="text-muted-foreground pt-0.5" />
             History
           </h1>
           {isSelectMode && (
@@ -179,7 +180,7 @@ export default function HistoryPage() {
                 disabled={selectedItems.size === 0}
                 className="
                   flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium
-                  bg-destructive/10 text-destructive hover:bg-destructive/20
+                  bg-destructive/70 hover:bg-destructive
                   disabled:opacity-40 disabled:cursor-not-allowed
                   transition-colors
                 "
@@ -212,7 +213,7 @@ export default function HistoryPage() {
                 onClick={clearHistory}
                 className="
                   flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium
-                  bg-destructive/10 text-destructive hover:bg-destructive/20
+                  bg-destructive/70 hover:bg-destructive
                   transition-colors
                 "
               >
@@ -251,8 +252,10 @@ export default function HistoryPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="
-            w-full pl-9 pr-4 py-2 text-sm rounded-full bg-muted placeholder:text-muted-foreground
-            focus:outline-none focus:ring-[1px] focus:ring-muted
+            w-full pl-9 pr-4 py-2 text-sm rounded-full
+                border border-input bg-muted
+                focus:outline-none focus:ring-2 focus:ring-ring
+                placeholder:text-muted-foreground 
             transition-all
           "
         />
@@ -270,7 +273,6 @@ export default function HistoryPage() {
             {sortedDates.map((date) => {
               const items = filteredGroupedHistory[date]
               const allSelectedForDate = items.every(item => selectedItems.has(item.id))
-              const someSelectedForDate = items.some(item => selectedItems.has(item.id))
 
               return (
                 <div key={date}>
@@ -292,7 +294,7 @@ export default function HistoryPage() {
                         onClick={(e) => deleteDateGroup(e, items)}
                         className="
                           text-xs px-2 py-1 rounded-md
-                          bg-destructive/10 text-destructive hover:bg-destructive/20
+                          bg-destructive/70 hover:bg-destructive
                           transition-colors
                         "
                       >
@@ -366,7 +368,7 @@ export default function HistoryPage() {
                                 ? 'opacity-100' 
                                 : 'opacity-0 group-hover:opacity-100'
                               }
-                              hover:bg-destructive/10 hover:text-destructive
+                              hover:bg-destructive
                             `}
                             title="Remove from history"
                           >

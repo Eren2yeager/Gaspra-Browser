@@ -7,6 +7,10 @@ declare global {
       addBookmark: (title: string, url: string) => Promise<{ success: boolean; error?: string }>
       getBookmarks: () => Promise<{ success: boolean; bookmarks?: any[]; error?: string }>
       deleteBookmark: (id: number) => Promise<{ success: boolean; error?: string }>
+      getQuickLinks: () => Promise<{ success: boolean; quickLinks?: any[]; error?: string }>
+      addQuickLink: (title: string, url: string) => Promise<{ success: boolean; id?: number; error?: string }>
+      updateQuickLink: (id: number, title: string, url: string) => Promise<{ success: boolean; error?: string }>
+      deleteQuickLink: (id: number) => Promise<{ success: boolean; error?: string }>
       addHistory: (title: string, url: string) => Promise<{ success: boolean; error?: string }>
       getHistory: () => Promise<{ success: boolean; history?: any[]; error?: string }>
       getHistoryGrouped: () => Promise<{ success: boolean; groupedHistory?: Record<string, any[]>; error?: string }>
@@ -20,6 +24,7 @@ declare global {
       deleteDownload: (id: string) => Promise<{ success: boolean; error?: string }>
       openFile: (filePath: string) => Promise<{ success: boolean; error?: string }>
       showInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>
+      selectFile: (options?: any) => Promise<{ success: boolean; canceled?: boolean; filePath?: string; error?: string }>
       addSearch: (query: string) => Promise<{ success: boolean; error?: string }>
       getSearchHistory: (limit?: number) => Promise<{ success: boolean; searchHistory?: any[]; error?: string }>
       clearSearchHistory: () => Promise<{ success: boolean; error?: string }>

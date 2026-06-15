@@ -53,14 +53,14 @@ export default function Sidebar () : JSX.Element {
     <aside
       className={`
         h-full bg-background flex flex-col 
-        transition-all duration-300 ease-in-out overflow-hidden
+        transition-all duration-300 ease-in-out overflow-hidden 
         ${isSidebarOpen ? 'w-80' : 'w-0'}
       `}
     >
       {/* 
         min-w-[20rem] prevents text squishing during the width transition animation 
       */}
-      <div className="flex-1 flex flex-col min-w-[20rem] p-3">
+      <div className="flex-1 flex flex-col min-w-[20rem] bg-muted/20 p-3  rounded-lg">
         {/* 1. Header with Title and Close Button */}
         <div className="flex items-center justify-between ">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -90,8 +90,10 @@ export default function Sidebar () : JSX.Element {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="
-                w-full pl-8 pr-3 py-1.5 text-sm rounded-md border border-input bg-muted
-                placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-muted
+                w-full pl-8 pr-3 py-1.5 text-sm rounded-full
+                border border-input bg-muted
+                focus:outline-none focus:ring-2 focus:ring-ring
+                placeholder:text-muted-foreground
                 transition-all
               "
             />
@@ -161,8 +163,8 @@ export default function Sidebar () : JSX.Element {
           onClick={handleAddCurrentPage}
           disabled={!activeTab}
             className="
-              flex items-center gap-2 w-full px-4 py-3 mb-3 rounded-full text-sm bg-muted text-foreground font-medium hover:bg-muted active:scale-95
-              text-destructive hover:bg-destructive/10 transition-all
+              flex items-center justify-center gap-2 w-full px-4 py-3 mb-3 rounded-full text-sm bg-muted text-foreground font-medium hover:bg-muted active:scale-95
+              hover:text-primary hover:bg-primary/10 transition-all
             "
         >
           <Star size={14} fill="currentColor" />

@@ -2,31 +2,174 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ================================
+   GLOBAL VARIABLES (Both Themes)
+   ================================ */
+:root {
+  --radius: 0.5rem;
+}
+
+/* ================================
+   DARK THEME
+   ================================ */
 @layer base {
-  :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+  :root,
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-    --radius: 0.5rem;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
   }
 }
 
+/* ================================
+   LIGHT THEME
+   ================================ */
+@layer base {
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+  }
+}
+
+/* ================================
+   ACCENT COLORS (Highest Specificity)
+   ================================ */
+@layer base {
+  /* Blue Accent (Default) */
+  :root.theme-accent-blue,
+  .dark.theme-accent-blue {
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --ring: 224.3 76.3% 48%;
+  }
+  .light.theme-accent-blue {
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 221.2 83.2% 53.3%;
+  }
+
+  /* Purple Accent */
+  :root.theme-accent-purple,
+  .dark.theme-accent-purple {
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 262.1 83.3% 57.8%;
+  }
+  .light.theme-accent-purple {
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 262.1 83.3% 57.8%;
+  }
+
+  /* Pink Accent */
+  :root.theme-accent-pink,
+  .dark.theme-accent-pink {
+    --primary: 330 81% 60%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 330 81% 60%;
+  }
+  .light.theme-accent-pink {
+    --primary: 330 81% 60%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 330 81% 60%;
+  }
+
+  /* Green Accent */
+  :root.theme-accent-green,
+  .dark.theme-accent-green {
+    --primary: 142.1 70.6% 45.3%;
+    --primary-foreground: 144.9 80.4% 10%;
+    --ring: 142.1 70.6% 45.3%;
+  }
+  .light.theme-accent-green {
+    --primary: 142.1 76.2% 36.3%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --ring: 142.1 76.2% 36.3%;
+  }
+
+  /* Orange Accent */
+  :root.theme-accent-orange,
+  .dark.theme-accent-orange {
+    --primary: 25 95% 53%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 25 95% 53%;
+  }
+  .light.theme-accent-orange {
+    --primary: 24.6 95% 53.1%;
+    --primary-foreground: 60 9.1% 97.8%;
+    --ring: 24.6 95% 53.1%;
+  }
+
+  /* Red Accent */
+  :root.theme-accent-red,
+  .dark.theme-accent-red {
+    --primary: 0 72% 51%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 0 72% 51%;
+  }
+  .light.theme-accent-red {
+    --primary: 0 84.2% 60.2%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 0 84.2% 60.2%;
+  }
+
+  /* Cyan Accent */
+  :root.theme-accent-cyan,
+  .dark.theme-accent-cyan {
+    --primary: 189 94% 43%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 189 94% 43%;
+  }
+  .light.theme-accent-cyan {
+    --primary: 189 94% 43%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 189 94% 43%;
+  }
+
+  /* Yellow Accent */
+  :root.theme-accent-yellow,
+  .dark.theme-accent-yellow {
+    --primary: 48 96% 53%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --ring: 48 96% 53%;
+  }
+  .light.theme-accent-yellow {
+    --primary: 47.9 95.8% 53.1%;
+    --primary-foreground: 26 83.3% 14.1%;
+    --ring: 47.9 95.8% 53.1%;
+  }
+}
+
+/* ================================
+   UTILITIES
+   ================================ */
 @layer base {
   * {
     @apply border-border;
@@ -36,38 +179,7 @@
   }
 }
 
-:root {
-  --ev-c-white: #ffffff;
-  --ev-c-white-soft: #f8f8f8;
-  --ev-c-white-mute: #f2f2f2;
 
-  --ev-c-black: #1b1b1f;
-  --ev-c-black-soft: #222222;
-  --ev-c-black-mute: #282828;
-
-  --ev-c-gray-1: #515c67;
-  --ev-c-gray-2: #414853;
-  --ev-c-gray-3: #32363f;
-
-  --ev-c-text-1: rgba(255, 255, 245, 0.86);
-  --ev-c-text-2: rgba(235, 235, 245, 0.6);
-  --ev-c-text-3: rgba(235, 235, 245, 0.38);
-
-  --ev-button-alt-border: transparent;
-  --ev-button-alt-text: var(--ev-c-text-1);
-  --ev-button-alt-bg: var(--ev-c-gray-3);
-  --ev-button-alt-hover-border: transparent;
-  --ev-button-alt-hover-text: var(--ev-c-text-1);
-  --ev-button-alt-hover-bg: var(--ev-c-gray-2);
-}
-
-:root {
-  --color-background: var(--ev-c-black);
-  --color-background-soft: var(--ev-c-black-soft);
-  --color-background-mute: var(--ev-c-black-mute);
-
-  --color-text: var(--ev-c-text-1);
-}
 
 *,
 *::before,
@@ -83,8 +195,6 @@ ul {
 
 body {
   min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
   line-height: 1.6;
   font-family:
     Inter,

@@ -9,9 +9,12 @@ import { registerSettingsHandlers } from './settings'
 import { registerTabHandlers } from './tabs'
 import { registerSystemHandlers } from './system'
 import { registerWindowHandlers } from './window'
+import { registerQuickLinkHandlers } from './quickLinks'
+import { registerFileHandlers } from './files'
 
 function registerHandlers(getMainWindow: () => any) {
   registerBookmarkHandlers()
+  registerQuickLinkHandlers()
   registerHistoryHandlers()
   registerDownloadHandlers(getMainWindow)
   registerSearchHistoryHandlers()
@@ -19,6 +22,7 @@ function registerHandlers(getMainWindow: () => any) {
   registerTabHandlers()
   registerSystemHandlers()
   registerWindowHandlers()
+  registerFileHandlers()
 }
 
 export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null) {

@@ -24,7 +24,7 @@ const TabBar = () => {
   }
 
   return (
-    <div className="flex items-center w-full bg-muted/30 h-10 pl-2 pt-1 gap-1" style={{ WebkitAppRegion: 'drag' } as any}>
+    <div className="flex items-center w-full bg-primary/10 h-10 pl-1 pt-1 " style={{ WebkitAppRegion: 'drag' } as any}>
       {/* Tab List - No scrollbar, tabs shrink instead */}
       <div className="flex items-center gap-1 overflow-hidden" style={{ WebkitAppRegion: 'no-drag' } as any}>
         {tabs.map((tab, index) => (
@@ -51,7 +51,7 @@ const TabBar = () => {
           w-8 h-8 
           rounded-md 
           text-muted-foreground 
-          hover:bg-accent hover:text-accent-foreground 
+          hover:bg-primary/20 hover:text-foreground 
           transition-colors duration-200
           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring
           flex-shrink-0

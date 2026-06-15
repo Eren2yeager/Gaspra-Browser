@@ -3,6 +3,9 @@ import { app } from 'electron'
 
 export const DEFAULT_SETTINGS = {
   theme: 'dark',
+  accentColor: 'purple',
+  backgroundType: 'none',
+  backgroundPath: null,
   defaultSearchEngine: 'google',
   saveHistory: true,
   saveDownloadHistory: true,

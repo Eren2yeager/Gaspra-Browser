@@ -65,7 +65,7 @@ export default function SettingsPage() {
             onClick={resetSettings}
             className="
               flex items-center gap-2 w-full px-4 py-3 rounded-full text-sm bg-muted text-foreground font-medium hover:bg-muted active:scale-95
-              text-destructive hover:bg-destructive/10 transition-all
+              hover:text-primary hover:bg-primary/10 transition-all
             "
           >
             <RotateCcw size={16} />
@@ -79,7 +79,7 @@ export default function SettingsPage() {
         {activeSection === 'appearance' && (
           <section>
             <h2 className="text-2xl font-semibold mb-6">Appearance</h2>
-            <div className="space-y-6 max-w-2xl">
+            <div className="space-y-8 max-w-2xl">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="theme">Theme</Label>
@@ -98,6 +98,111 @@ export default function SettingsPage() {
                     <SelectItem value="system">System</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-0.5">
+                  <Label>Accent Color</Label>
+                  <div className="text-xs text-muted-foreground">Select your favorite accent color</div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { name: 'blue', color: 'bg-blue-500' },
+                    { name: 'purple', color: 'bg-purple-500' },
+                    { name: 'pink', color: 'bg-pink-500' },
+                    { name: 'green', color: 'bg-green-500' },
+                    { name: 'orange', color: 'bg-orange-500' },
+                    { name: 'red', color: 'bg-red-500' },
+                    { name: 'cyan', color: 'bg-cyan-500' },
+                    { name: 'yellow', color: 'bg-yellow-500' },
+                  ].map((accent) => (
+                    <button
+                      key={accent.name}
+                      onClick={() => updateSetting('accentColor', accent.name as any)}
+                      className={`
+                        w-12 h-12 rounded-full border-2 transition-all hover:scale-110
+                        ${accent.color}
+                        ${settings.accentColor === accent.name ? ' scale-110 ring-2 ring-ring ring-offset-2 ring-offset-background' : 'border-transparent'}
+                      `}
+                      aria-label={`Select ${accent.name} accent`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-6 pt-2 border-t border-border">
+                <div className="space-y-0.5">
+                  <Label>New Tab Background</Label>
+                  <div className="text-xs text-muted-foreground">Customize your new tab page background</div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { value: 'none', label: 'None' },
+                    { value: 'image', label: 'Image/GIF' },
+                    { value: 'video', label: 'Video' },
+                  ].map((type) => (
+                    <button
+                      key={type.value}
+                      onClick={() => {
+                        updateSetting('backgroundType', type.value as any)
+                      }}
+                      className={`
+                        px-4 py-2 rounded-lg border transition-all
+                        ${settings.backgroundType === type.value ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent hover:text-accent-foreground'}
+                      `}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+
+                {settings.backgroundType !== 'none' && (
+                  <div className="space-y-3">
+                    <button
+                      onClick={async () => {
+                        console.log('SettingsPage: Select file button clicked!')
+                        const result = await window.browserAPI.selectFile({
+                          filters: [
+                            settings.backgroundType === 'image'
+                              ? { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'] }
+                              : { name: 'Videos', extensions: ['mp4', 'webm', 'ogg'] },
+                          ],
+                        })
+                        console.log('SettingsPage: selectFile result:', result)
+                        if (result.success && result.filePath) {
+                          console.log('SettingsPage: updating backgroundPath to:', result.filePath)
+                          await updateSetting('backgroundPath', result.filePath)
+                        }
+                      }}
+                      className="
+                        w-full px-4 py-2 rounded-lg bg-secondary text-secondary-foreground
+                        hover:bg-secondary/80 transition-colors flex items-center justify-center gap-2
+                      "
+                    >
+                      Select {settings.backgroundType === 'image' ? 'Image/GIF' : 'Video'}
+                    </button>
+
+                    {settings.backgroundPath && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-muted-foreground truncate">
+                          Selected: {settings.backgroundPath}
+                        </div>
+                        <button
+                          onClick={() => {
+                            updateSetting('backgroundPath', null)
+                            updateSetting('backgroundType', 'none')
+                          }}
+                          className="
+                            text-xs text-destructive hover:text-destructive/80 underline
+                          "
+                        >
+                          Remove Background
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </section>

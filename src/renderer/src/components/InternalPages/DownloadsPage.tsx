@@ -14,7 +14,7 @@ import {
   CheckSquare,
   Square
 } from 'lucide-react'
-
+import {AppIcon} from '../CustomIcons/AppIcon'
 const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B'
   const k = 1024
@@ -68,7 +68,6 @@ const formatTime = (dateString: string) => {
 
 export default function DownloadsPage() {
   const {
-    downloads,
     groupedDownloads,
     clearDownloads,
     pauseDownload,
@@ -190,8 +189,8 @@ export default function DownloadsPage() {
     <div className="w-full h-full flex flex-col p-6 bg-background text-foreground">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Download size={24} className="text-muted-foreground" />
+          <h1 className="text-2xl align-center font-semibold flex items-center gap-2">
+            <AppIcon size={50} className="text-muted-foreground pt-0.5 grayscale" />
             Downloads
           </h1>
           {isSelectMode && (
@@ -210,7 +209,7 @@ export default function DownloadsPage() {
                 disabled={selectedItems.size === 0}
                 className="
                   flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium
-                  bg-destructive/10 text-destructive hover:bg-destructive/20
+                  bg-destructive/70 hover:bg-destructive
                   disabled:opacity-40 disabled:cursor-not-allowed
                   transition-colors
                 "
@@ -243,7 +242,7 @@ export default function DownloadsPage() {
                 onClick={clearDownloads}
                 className="
                   flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium
-                  bg-destructive/10 text-destructive hover:bg-destructive/20
+                  bg-destructive/70 hover:bg-destructive
                   transition-colors
                 "
               >
@@ -280,7 +279,10 @@ export default function DownloadsPage() {
           placeholder="Search downloads..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-sm rounded-full bg-muted placeholder:text-muted-foreground focus:outline-none focus:ring-[1px] focus:ring-white transition-all"
+          className="w-full pl-9 pr-4 py-2 text-sm rounded-full
+                border border-input bg-muted
+                focus:outline-none focus:ring-2 focus:ring-ring
+                placeholder:text-muted-foreground transition-all"
         />
       </div>
 
@@ -323,7 +325,7 @@ export default function DownloadsPage() {
                         onClick={(e) => deleteDateGroup(e, dateDownloads)}
                         className="
                           text-xs px-2 py-1 rounded-md
-                          bg-destructive/10 text-destructive hover:bg-destructive/20
+                          bg-destructive/70 hover:bg-destructive
                           transition-colors
                         "
                       >

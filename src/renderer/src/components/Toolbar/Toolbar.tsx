@@ -13,7 +13,6 @@ import {
   Search,
   Lock,
   Star,
-  Bookmark,
   Home,
   Clock,
   Settings as SettingsIcon,
@@ -23,9 +22,11 @@ import {
   MoreVertical,
   Eraser,
   Globe,
-  PanelLeft
+  ChevronDown
 } from 'lucide-react'
 import DownloadBubble from '../DownloadBubble/DownloadBubble'
+import { AppIcon } from '../CustomIcons/AppIcon'
+import { SearchEngineIcon } from '../CustomIcons/SearchEngineIcon'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -81,7 +82,7 @@ const Toolbar = () => {
         setInputValue(activeTab.url)
       }
     }
-  }, [activeTab?.id, activeTab?.url])
+  }, [activeTab?.id]) // Only reset when switching tabs, not when URL changes on same tab
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -161,6 +162,8 @@ const Toolbar = () => {
     }
 
     updateTab(activeTab.id, { url: finalUrl, requestedUrl: finalUrl, title: finalUrl })
+    // Update inputValue to match new URL
+    setInputValue(finalUrl)
     setIsEditing(false)
     setShowDropdown(false)
   }
@@ -236,7 +239,7 @@ const Toolbar = () => {
   if (!activeTab) return null
 
   return (
-    <div className="flex items-center gap-2 px-2 py-2 bg-background">
+    <div className="flex items-center gap-2 px-2 py-2 bg-primary/10">
       <div className="flex items-center gap-1">
         <NavButton
           disabled={!activeTab.canGoBack}
@@ -261,25 +264,106 @@ const Toolbar = () => {
       <div className="flex-1 min-w-0 flex items-center relative">
         <div
           className={`
-            relative flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded-full border-none bg-background outline-none transition-all
+            relative flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded-full
+                border border-input bg-muted
+                focus:outline-none focus:ring-2 focus:ring-ring
+                placeholder:text-muted-foreground transition-all
             ${
               isEditing
-                ? 'bg-background border-primary shadow-sm bg-muted '
-                : 'bg-muted/50 border-transparent hover:bg-muted hover:border-input'
+                ? 'bg-primary/10 border-primary shadow-sm  '
+                : 'bg-primary/20 border-transparent hover:bg-primary/30 hover:border-input'
             }
           `}
           onClick={() => !isEditing && setIsEditing(true)}
         >
-          <div className="text-muted-foreground flex-shrink-0">
-            {isEditing ? (
-              <Search size={14} />
-            ) : activeTab.url.startsWith('https') ? (
-              <Lock size={12} className="text-green-600 dark:text-green-500" />
+          {/* Left section: icons/capsule */}
+          {activeTab.url.startsWith('gaspra://') ? (
+            activeTab.url === 'gaspra://newtab' ? (
+              // New tab: search engine selector capsule (always show)
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
+                    className="flex items-center gap-1.5 p-0.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/30 transition-colors"
+                  >
+                    <SearchEngineIcon 
+                      engine={settings?.defaultSearchEngine || 'google'} 
+                      className="bg-muted/50 p-[2px]  rounded-full"
+                      size={20} 
+                    />
+                    <span className="capitalize font-medium">
+                      {settings?.defaultSearchEngine || 'google'}
+                    </span>
+                    <ChevronDown size={12} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Select Search Engine</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem
+                    checked={settings?.defaultSearchEngine === 'google'}
+                    onCheckedChange={() => updateSetting('defaultSearchEngine', 'google')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <SearchEngineIcon engine="google" size={16} />
+                      <span>Google</span>
+                    </div>
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={settings?.defaultSearchEngine === 'bing'}
+                    onCheckedChange={() => updateSetting('defaultSearchEngine', 'bing')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <SearchEngineIcon engine="bing" size={16} />
+                      <span>Bing</span>
+                    </div>
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={settings?.defaultSearchEngine === 'duckduckgo'}
+                    onCheckedChange={() => updateSetting('defaultSearchEngine', 'duckduckgo')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <SearchEngineIcon engine="duckduckgo" size={16} />
+                      <span>DuckDuckGo</span>
+                    </div>
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={settings?.defaultSearchEngine === 'yahoo'}
+                    onCheckedChange={() => updateSetting('defaultSearchEngine', 'yahoo')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <SearchEngineIcon engine="yahoo" size={16} />
+                      <span>Yahoo</span>
+                    </div>
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
-              <Search size={14} />
-            )}
-          </div>
+              // Other internal pages: Gaspra capsule (always show)
+              <div className=" align-center  flex items-center gap-1 p-0.5 pr-2 rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                <AppIcon size={20} className='bg-muted/50  rounded-full'/>
+                <span className="font-medium">Gaspra</span>
+              </div>
+            )
+          ) : (
+            // Regular web pages
+            isEditing ? (
+              <div className="text-muted-foreground flex-shrink-0">
+                <Search size={14} className="text-primary" />
+              </div>
+            ) : (
+              <div className="text-muted-foreground flex-shrink-0">
+                {activeTab.url.startsWith('https') ? (
+                  <Lock size={12} className="text-green-600 dark:text-green-500" />
+                ) : (
+                  <Search size={14} className="text-muted-foreground" />
+                )}
+              </div>
+            )
+          )}
 
+          {/* Middle section: input/display */}
           {isEditing ? (
             <input
               ref={inputRef}
@@ -294,12 +378,19 @@ const Toolbar = () => {
             />
           ) : (
             <div className="flex-1 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground select-none">
-              {activeTab.url === 'gaspra://newtab'
-                ? 'Search or enter website name'
-                : activeTab.url.replace(/^https?:\/\//, '')}
+              {/* If inputValue is different from active tab's URL, show what user typed */}
+              {inputValue && 
+               (activeTab.url === 'gaspra://newtab' ? inputValue !== '' : inputValue !== activeTab.url) 
+                ? inputValue 
+                : activeTab.url === 'gaspra://newtab'
+                  ? 'Search or enter website name'
+                  : activeTab.url.startsWith('gaspra://')
+                  ? activeTab.url.replace('gaspra://', '')
+                  : activeTab.url.replace(/^https?:\/\//, '')}
             </div>
           )}
 
+          {/* Right section: clear and bookmark */}
           {isEditing && inputValue.length > 0 && (
             <button
               onClick={(e) => {
@@ -314,25 +405,27 @@ const Toolbar = () => {
             </button>
           )}
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              handleToggleBookmark()
-            }}
-            className={`
-              flex-shrink-0 p-1 rounded-md transition-all duration-200
-              focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring
-              ${
-                isBookmarked
-                  ? 'text-white hover:bg-yellow-500/10'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              }
-            `}
-            aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-            title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-          >
-            <Star size={16} strokeWidth={2} fill={isBookmarked ? 'currentColor' : 'none'} />
-          </button>
+          {!activeTab.url.startsWith('gaspra://') && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleToggleBookmark()
+              }}
+              className={`
+                flex-shrink-0 p-1 rounded-md transition-all duration-200
+                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring
+                ${
+                  isBookmarked
+                    ? 'text-primary hover:bg-primary/20'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                }
+              `}
+              aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+              title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+            >
+              <Star size={16} strokeWidth={2} fill={isBookmarked ? 'currentColor' : 'none'} />
+            </button>
+          )}
         </div>
 
         {isEditing && showDropdown && filteredHistory.length > 0 && (
@@ -341,15 +434,15 @@ const Toolbar = () => {
             tabIndex={-1}
             className="absolute top-full left-0 right-0 bg-muted border-primary/20 rounded-lg mt-1 shadow-lg z-50 max-h-80 overflow-y-auto"
           >
-            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground">
+            <div className="px-3 py-2 text-xs font-semibold bg-primary/20 text-foreground">
               Recent Searches
             </div>
             {filteredHistory.slice(0, 6).map((item, index) => (
               <div
                 key={item.id}
                 className={`
-                  flex items-center justify-between px-3 py-2 cursor-pointer transition-colors
-                  ${index === selectedIndex ? 'bg-accent' : 'hover:bg-accent'}
+                  flex items-center justify-between bg-primary/20 text-foreground   px-3 py-2 cursor-pointer transition-colors
+                  ${index === selectedIndex ? 'bg-accent' : 'hover:bg-primary/30'}
                 `}
                 onClick={() => handleNavigation(item.query)}
               >

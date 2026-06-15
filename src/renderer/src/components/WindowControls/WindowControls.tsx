@@ -25,24 +25,22 @@ const WindowControls = () => {
     if (response.success) {
       setIsMaximized(!!response.isMaximized)
     } else {
-      refreshIsMaximized()
     }
   }
 
   const handleClose = async () => {
     await window.browserAPI.closeWindow()
   }
-
-  if (isWindows) {
-    return <div className="w-[138px] h-full bg-background shrink-0 pointer-events-none" aria-hidden="true" />
-  }
+  // if (isWindows) {
+  //   return <div className="w-[138px] h-full bg-background shrink-0 pointer-events-none" aria-hidden="true" />
+  // }
 
   return (
     <div className="flex items-stretch h-full" style={{ WebkitAppRegion: 'no-drag' } as any}>
       <button
         type="button"
         onClick={handleMinimize}
-        className="w-12 h-full flex items-center  justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        className="w-12 h-full flex items-center  justify-center text-muted-foreground hover:bg-primary/10 hover:text-foreground  transition-colors"
         aria-label="Minimize"
         title="Minimize"
       >
@@ -52,7 +50,7 @@ const WindowControls = () => {
       <button
         type="button"
         onClick={handleToggleMaximize}
-        className="w-12 h-full flex items-center  justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        className="w-12 h-full flex items-center  justify-center text-muted-foreground hover:bg-primary/10 hover:text-foreground  transition-colors"
         aria-label={isMaximized ? 'Restore' : 'Maximize'}
         title={isMaximized ? 'Restore' : 'Maximize'}
       >

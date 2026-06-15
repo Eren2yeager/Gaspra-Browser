@@ -8,6 +8,7 @@ import createDownloads from './downloads'
 import createSearchHistory from './searchHistory'
 import createSettings from './settings'
 import createTabs from './tabs'
+import createQuickLinks from './quickLinks'
 
 import {DEFAULT_SETTINGS} from './settings'
 const dbPath = join(app.getPath('userData'), 'gaspra.db')
@@ -75,6 +76,16 @@ function initializeDB() {
     )
   `).run()
 
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS quick_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL UNIQUE,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run()
+
   initializeSettings()
   console.log('Database initialized successfully!')
 }
@@ -86,6 +97,8 @@ function initializeSettings() {
   })
 }
 
+initializeDB()
+
 // create module instances
 const bookmarks = createBookmarks(db)
 const history = createHistory(db)
@@ -93,6 +106,9 @@ const downloads = createDownloads(db)
 const searchHistory = createSearchHistory(db)
 const settings = createSettings(db, DEFAULT_SETTINGS)
 const tabs = createTabs(db)
+const quickLinks = createQuickLinks(db)
+
+// quickLinks.seedDefaultQuickLinks()
 
 export const dbOperations = {
   ...bookmarks,
@@ -100,9 +116,8 @@ export const dbOperations = {
   ...downloads,
   ...searchHistory,
   ...settings,
-  ...tabs
+  ...tabs,
+  ...quickLinks
 }
 
 export { db }
-
-initializeDB()

@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Search, ArrowRight } from 'lucide-react'
+import { Search, Rocket } from 'lucide-react'
 import { useBrowser } from '../../context/BrowserContext'
 import { useSettings } from '../../context/SettingsContext'
-import browserIcon from '../../assets/icon.png'
+import { AppIcon } from '../CustomIcons/AppIcon'
+import QuickLinksGrid from '../QuickLinks/QuickLinksGrid'
 
-// Helper to get search URL from search engine
 function getSearchUrl(searchEngine: string, query: string): string {
   switch (searchEngine) {
     case 'google':
@@ -20,35 +20,37 @@ function getSearchUrl(searchEngine: string, query: string): string {
   }
 }
 
-export default function NewTabPage() {
-  const {  updateTab, activeTabId, tabs, setActiveTab } = useBrowser()
-  const { settings } = useSettings()
-  const [searchQuery, setSearchQuery] = useState('')
-  const quickLinks = [
-    { name: 'Google', url: 'https://www.google.com' , favicon: 'https://www.google.com/s2/favicons?domain=google.com&sz=32'},
-    { name: 'YouTube', url: 'https://www.youtube.com' , favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32'},
-    { name: 'GitHub', url: 'https://github.com' , favicon: 'https://www.google.com/s2/favicons?domain=github.com&sz=32'},
-    { name: 'Twitter', url: 'https://twitter.com' , favicon: 'https://www.google.com/s2/favicons?domain=twitter.com&sz=32'},
-  ]
+function pathToFileUrl(filePath: string): string {
+  // Simple way to convert a file path to file URL that works on all platforms
+  // Handle Windows drive letters like C:\
+  if (/^[a-zA-Z]:\\/.test(filePath)) {
+    return 'file:///' + filePath.replace(/\\/g, '/')
+  }
+  // Handle Unix-style paths and network paths
+  return 'file://' + filePath.replace(/\\/g, '/')
+}
 
-    const handleNavigate = (url: string) : void   => {
+export default function NewTabPage() {
+  const { updateTab, activeTabId, tabs, setActiveTab } = useBrowser()
+  const { settings, isLoading } = useSettings()
+  const [searchQuery, setSearchQuery] = useState('')
+
+  console.log('NewTabPage - Settings:', settings)
+  console.log('NewTabPage - isLoading:', isLoading)
+
+  const handleNavigate = (url: string): void => {
     if (!activeTabId) return
 
-    // Check if it's an internal page (gaspra://) and not newtab
     if (url.startsWith('gaspra://') && url !== 'gaspra://newtab') {
-      // Find existing tab with this URL
-      const existingTab = tabs.find(tab => tab.url === url)
+      const existingTab = tabs.find((tab) => tab.url === url)
       if (existingTab) {
-        // Activate the existing tab instead of updating current
         setActiveTab(existingTab.id)
         return
       }
     }
 
-    // Update the active tab's state (updates the address bar)
     updateTab(activeTabId, { url, requestedUrl: url, title: url })
   }
-
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,66 +60,77 @@ export default function NewTabPage() {
     }
   }
 
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-background text-foreground">
-      <img src={browserIcon} alt="Gaspra Browser Logo" className="w-24 h-24 mb-4" />
-      <h1 className="text-3xl font-bold mb-8">Gaspra Browser</h1>
-      <div className="w-full max-w-xl px-6">
-        <form onSubmit={handleSearch} className="w-full">
-          <div className="relative w-full">
-            <Search
-              size={20}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <input
-              type="text"
-              placeholder="Search or enter URL..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="
-                w-full pl-12 pr-12 py-3 text-lg rounded-full
-                border border-input bg-muted
-                focus:outline-none focus:ring-2 focus:ring-ring
-                placeholder:text-muted-foreground
-                transition-all
-              "
-              autoFocus
-            />
-            {searchQuery && (
-              <button
-                type="submit"
-                className="
-                  absolute right-2 top-1/2 -translate-y-1/2
-                  p-2 rounded-full bg-primary text-primary-foreground
-                  hover:opacity-90 transition-opacity
-                "
-              >
-                <ArrowRight size={16} />
-              </button>
-            )}
-          </div>
-        </form>
+  const fileUrl = settings?.backgroundPath ? pathToFileUrl(settings.backgroundPath) : null
+  console.log('NewTabPage - File URL:', fileUrl)
 
-        <div className="mt-12">
-          {/* <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">Quick Links</h3> */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {quickLinks.map((link) => (
-              <button
-                key={link.url}
-                onClick={() => handleNavigate(link.url)}
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-background text-foreground relative overflow-hidden">
+      {/* Background */}
+      {settings?.backgroundType && settings.backgroundType !== 'none' && fileUrl && (
+        <>
+          {settings.backgroundType === 'image' && (
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url('${fileUrl}')` }}
+            />
+          )}
+          {settings.backgroundType === 'video' && (
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+              src={fileUrl}
+            />
+          )}
+          {/* Overlay for readability */}
+          <div className="absolute inset-0 bg-background/10" />
+        </>
+      )}
+
+      {/* Content */}
+      <div className="relative z-10 w-full flex flex-col items-center">
+        <AppIcon size={100} className="mb-4" />
+        <h1 className="text-3xl font-bold mb-8">Gaspra Browser</h1>
+        <div className="w-full max-w-3xl px-6">
+          <form onSubmit={handleSearch} className="w-full">
+            <div className="relative w-full">
+              <Search
+                size={20}
+                className="absolute left-4 top-1/2 -translate-y-1/2  z-10 text-primary"
+              />
+              <input
+                type="text"
+                placeholder="Search or enter URL..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="
-                  flex flex-col items-center gap-2 p-4 rounded-lg
-                  
-                  hover:bg-muted/40 hover:border-primary/30
+                  w-full pl-12 pr-12 py-3 text-lg rounded-full shadow-2xl
+                  border border-input bg-background/80 backdrop-blur
+                  focus:outline-none focus:ring-2 focus:ring-ring
+                  placeholder:text-muted-foreground 
                   transition-all
                 "
-              >
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <img src={link.favicon} alt={`${link.name} favicon`} className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium">{link.name}</span>
-              </button>
-            ))}
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  type="submit"
+                  className="
+                    absolute right-2 top-1/2 -translate-y-1/2
+                    p-2 rounded-full bg-primary text-primary-foreground
+                    hover:opacity-90 transition-opacity
+                  "
+                >
+                  <Rocket size={20} className="text-primary-foreground" />
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="mt-12">
+            <QuickLinksGrid onNavigate={handleNavigate} />
           </div>
         </div>
       </div>

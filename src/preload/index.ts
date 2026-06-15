@@ -9,6 +9,7 @@ import { windowAPI } from './api/window'
 import { settingsAPI } from './api/settings'
 import { tabsAPI } from './api/tabs'
 import { contextMenuAPI } from './api/contextMenu'
+import { quickLinksAPI } from './api/quickLinks'
 
 const browserAPI = {
   ...bookmarksAPI,
@@ -19,7 +20,8 @@ const browserAPI = {
   ...windowAPI,
   ...settingsAPI,
   ...tabsAPI,
-  ...contextMenuAPI
+  ...contextMenuAPI,
+  ...quickLinksAPI
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

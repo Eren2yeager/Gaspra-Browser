@@ -11,21 +11,23 @@ export function createWindow(): BrowserWindow {
     height: 800,
     show: false,
     titleBarStyle: 'hidden',
-    ...(process.platform === 'win32'
-      ? {
-          titleBarOverlay: {
-            color: '#1f1f22',
-            symbolColor: '#d4d4d8',
-            height: 40
-          }
-        }
-      : {}),
+    // ...(process.platform === 'win32'
+    //   ? {
+    //       titleBarOverlay: {
+    //         color: '#02050D',
+    //         symbolColor: '#d4d4d8',
+    //         height: 40
+    //       }
+    //     }
+    //   : {}),
     autoHideMenuBar: true,
     ...(process.platform === 'linux' || process.platform === 'win32' ? { icon: windowIcon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      webviewTag: true
+      webviewTag: true,
+      webSecurity: false,
+      // allowFileAccessFromFiles: true
     }
   })
 
