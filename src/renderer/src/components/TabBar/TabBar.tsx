@@ -3,6 +3,7 @@ import Tab from './Tab'
 import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import WindowControls from '../../components/WindowControls/WindowControls'
+import { extractDroppedUrl, isLinkDrag } from '../../lib/droppedUrl'
 
 type DragSession = {
   tabId: number
@@ -19,7 +20,7 @@ type DragSession = {
 const MOVE_THRESHOLD = 5
 
 const TabBar = () => {
-  const { tabs, addTab, reorderTabs, tearOffTab, setActiveTab } = useBrowser()
+  const { tabs, addTab, reorderTabs, tearOffTab, setActiveTab, navigateTab } = useBrowser()
   const stripRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragSession | null>(null)
   const translateRef = useRef(0)
@@ -29,6 +30,8 @@ const TabBar = () => {
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragTranslateX, setDragTranslateX] = useState(0)
   const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null)
+  const [linkDropTabId, setLinkDropTabId] = useState<number | null>(null)
+  const [linkDropOnBar, setLinkDropOnBar] = useState(false)
 
   const setTranslate = (x: number) => {
     translateRef.current = x
@@ -41,6 +44,39 @@ const TabBar = () => {
     setTranslate(0)
     setFloatPos(null)
   }
+
+  const clearLinkDrop = () => {
+    setLinkDropTabId(null)
+    setLinkDropOnBar(false)
+    document.documentElement.classList.remove('link-dragging')
+  }
+
+  // Allow drops on -webkit-app-region: drag chrome while a link is dragged in.
+  useEffect(() => {
+    const markLinkDrag = (e: DragEvent) => {
+      if (!isLinkDrag(e.dataTransfer)) return
+      document.documentElement.classList.add('link-dragging')
+    }
+
+    const maybeClear = (e: DragEvent) => {
+      // Only clear when leaving the window (relatedTarget null).
+      if (e.relatedTarget == null) clearLinkDrop()
+    }
+
+    window.addEventListener('dragenter', markLinkDrag)
+    window.addEventListener('dragover', markLinkDrag)
+    window.addEventListener('dragleave', maybeClear)
+    window.addEventListener('drop', clearLinkDrop)
+    window.addEventListener('dragend', clearLinkDrop)
+    return () => {
+      window.removeEventListener('dragenter', markLinkDrag)
+      window.removeEventListener('dragover', markLinkDrag)
+      window.removeEventListener('dragleave', maybeClear)
+      window.removeEventListener('drop', clearLinkDrop)
+      window.removeEventListener('dragend', clearLinkDrop)
+      document.documentElement.classList.remove('link-dragging')
+    }
+  }, [])
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -162,12 +198,71 @@ const TabBar = () => {
     target.setPointerCapture?.(e.pointerId)
   }
 
+  const allowLinkDrop = (e: React.DragEvent) => {
+    if (!isLinkDrag(e.dataTransfer)) return false
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'link'
+    return true
+  }
+
+  const handleLinkDragOverTab = (e: React.DragEvent, tabId: number) => {
+    if (!allowLinkDrop(e)) return
+    setLinkDropTabId(tabId)
+    setLinkDropOnBar(false)
+  }
+
+  const handleLinkDragLeaveTab = (e: React.DragEvent, tabId: number) => {
+    const related = e.relatedTarget as Node | null
+    if (related && (e.currentTarget as HTMLElement).contains(related)) return
+    setLinkDropTabId((prev) => (prev === tabId ? null : prev))
+  }
+
+  const handleLinkDropOnTab = (e: React.DragEvent, tabId: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const url = extractDroppedUrl(e.dataTransfer)
+    clearLinkDrop()
+    if (!url) return
+    setActiveTab(tabId)
+    navigateTab(tabId, url)
+  }
+
+  const handleBarDragOver = (e: React.DragEvent) => {
+    if (!allowLinkDrop(e)) return
+    // If hovering a tab chip, that handler owns the highlight.
+    if ((e.target as HTMLElement).closest('[data-tab-id]')) return
+    setLinkDropTabId(null)
+    setLinkDropOnBar(true)
+  }
+
+  const handleBarDragLeave = (e: React.DragEvent) => {
+    const related = e.relatedTarget as Node | null
+    if (related && (e.currentTarget as HTMLElement).contains(related)) return
+    setLinkDropOnBar(false)
+    setLinkDropTabId(null)
+  }
+
+  const handleBarDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    // Tab chips handle their own drop; ignore if landed on one.
+    if ((e.target as HTMLElement).closest('[data-tab-id]')) return
+    const url = extractDroppedUrl(e.dataTransfer)
+    clearLinkDrop()
+    if (!url) return
+    addTab(url)
+  }
+
   const floatingTab = draggingId != null ? tabs.find((t) => t.id === draggingId) : null
 
   return (
     <div
-      className="flex items-center w-full bg-primary/10 h-10 pl-1 pt-1 "
+      className={`flex items-center w-full bg-primary/10 h-10 pl-1 pt-1 ${
+        linkDropOnBar ? 'ring-1 ring-inset ring-primary/60' : ''
+      }`}
       style={{ WebkitAppRegion: 'drag' } as any}
+      onDragOver={handleBarDragOver}
+      onDragLeave={handleBarDragLeave}
+      onDrop={handleBarDrop}
     >
       <div
         ref={stripRef}
@@ -185,8 +280,12 @@ const TabBar = () => {
             index={index}
             isDragging={draggingId === tab.id}
             isGhost={draggingId === tab.id && floatPos != null}
+            isLinkDropTarget={linkDropTabId === tab.id}
             dragTranslateX={draggingId === tab.id && !floatPos ? dragTranslateX : 0}
             onPointerDownTab={handlePointerDown}
+            onLinkDragOverTab={handleLinkDragOverTab}
+            onLinkDragLeaveTab={handleLinkDragLeaveTab}
+            onLinkDropOnTab={handleLinkDropOnTab}
           />
         ))}
       </div>
@@ -194,7 +293,7 @@ const TabBar = () => {
       <button
         onClick={() => addTab()}
         style={{ WebkitAppRegion: 'no-drag' } as any}
-        className="
+        className={`
           flex items-center justify-center 
           w-8 h-8 
           rounded-md 
@@ -203,7 +302,8 @@ const TabBar = () => {
           transition-colors duration-200
           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring
           flex-shrink-0
-        "
+          ${linkDropOnBar ? 'bg-primary/20 text-foreground ring-1 ring-primary' : ''}
+        `}
         aria-label="New Tab"
       >
         <Plus size={16} strokeWidth={2} />

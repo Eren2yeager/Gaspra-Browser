@@ -13,8 +13,12 @@ interface TabProps {
   index: number
   isDragging: boolean
   isGhost: boolean
+  isLinkDropTarget: boolean
   dragTranslateX: number
   onPointerDownTab: (e: React.PointerEvent, tabId: number, index: number) => void
+  onLinkDragOverTab: (e: React.DragEvent, tabId: number) => void
+  onLinkDragLeaveTab: (e: React.DragEvent, tabId: number) => void
+  onLinkDropOnTab: (e: React.DragEvent, tabId: number) => void
 }
 
 const Tab = ({
@@ -26,8 +30,12 @@ const Tab = ({
   index,
   isDragging,
   isGhost,
+  isLinkDropTarget,
   dragTranslateX,
-  onPointerDownTab
+  onPointerDownTab,
+  onLinkDragOverTab,
+  onLinkDragLeaveTab,
+  onLinkDropOnTab
 }: TabProps): JSX.Element => {
   const { closeTab, activeTabId } = useBrowser()
   const isActive = activeTabId === id
@@ -88,8 +96,12 @@ const Tab = ({
             : 'text-muted-foreground hover:text-foreground'
         }
         ${isDragging && !isGhost ? 'shadow-md ring-1 ring-border bg-primary/25' : ''}
+        ${isLinkDropTarget ? 'ring-2 ring-primary bg-primary/30 text-foreground' : ''}
       `}
         onPointerDown={(e) => onPointerDownTab(e, id, index)}
+        onDragOver={(e) => onLinkDragOverTab(e, id)}
+        onDragLeave={(e) => onLinkDragLeaveTab(e, id)}
+        onDrop={(e) => onLinkDropOnTab(e, id)}
       >
         {isLoading ? (
           <SpinnerCustom />

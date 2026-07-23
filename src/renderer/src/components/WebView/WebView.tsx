@@ -1,13 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type DragEvent } from 'react'
 import { useBrowser } from '../../context/BrowserContext'
 import { useHistory } from '../../context/HistoryContext'
 import HistoryPage from '../InternalPages/HistoryPage'
 import DownloadsPage from '../InternalPages/DownloadsPage'
 import NewTabPage from '../InternalPages/NewTabPage'
 import SettingsPage from '../InternalPages/SettingsPage'
+import { extractDroppedUrl, isLinkDrag } from '../../lib/droppedUrl'
 
 const WebView = () => {
-  const { tabs, activeTabId } = useBrowser()
+  const { tabs, activeTabId, navigateTab } = useBrowser()
   const { addHistory } = useHistory()
   const containerRef = useRef<HTMLDivElement>(null)
   const lastHistoryUrlRef = useRef<Record<number, string>>({})
@@ -55,8 +56,27 @@ const WebView = () => {
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const showInternal = activeTab?.url.startsWith('gaspra://')
 
+  const handleLinkDragOver = (e: DragEvent) => {
+    if (!showInternal || !isLinkDrag(e.dataTransfer)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'link'
+  }
+
+  const handleLinkDrop = (e: DragEvent) => {
+    if (!showInternal || !activeTab) return
+    e.preventDefault()
+    const url = extractDroppedUrl(e.dataTransfer)
+    if (!url) return
+    navigateTab(activeTab.id, url)
+  }
+
   return (
-    <div ref={containerRef} className="flex-1 min-w-0 relative overflow-hidden">
+    <div
+      ref={containerRef}
+      className="flex-1 min-w-0 relative overflow-hidden"
+      onDragOver={handleLinkDragOver}
+      onDrop={handleLinkDrop}
+    >
       {showInternal && activeTab?.url === 'gaspra://newtab' && (
         <div className="w-full h-full absolute inset-0 overflow-y-auto bg-background">
           <NewTabPage />

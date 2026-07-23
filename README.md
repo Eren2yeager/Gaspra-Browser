@@ -1,4 +1,4 @@
-# gaspra-browser
+# Gaspra-browser
 
 An Electron application with React and TypeScript
 

@@ -28,6 +28,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger
 } from '../ui/dropdown-menu'
+import { extractDroppedUrl, isLinkDrag } from '../../lib/droppedUrl'
 
 function getSearchUrl(searchEngine: string, query: string): string {
   switch (searchEngine) {
@@ -292,9 +293,36 @@ const Toolbar = () => {
     return unsub
   })
 
+  const handleToolbarDragOver = (e: React.DragEvent) => {
+    if (!isLinkDrag(e.dataTransfer)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'link'
+  }
+
+  const handleToolbarDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const url = extractDroppedUrl(e.dataTransfer)
+    if (!url) return
+
+    // Dropping on the address bar navigates the current tab (Chrome-like).
+    const onAddressBar = !!(e.target as HTMLElement).closest('[data-address-bar]')
+    if (onAddressBar && activeTab) {
+      navigateTab(activeTab.id, url)
+      setInputValue(url)
+      setIsEditing(false)
+      return
+    }
+
+    addTab(url)
+  }
+
   if (!activeTab) return null
   return (
-    <div className="flex items-center gap-2 px-2 py-2 bg-primary/10">
+    <div
+      className="flex items-center gap-2 px-2 py-2 bg-primary/10"
+      onDragOver={handleToolbarDragOver}
+      onDrop={handleToolbarDrop}
+    >
       <div className="flex items-center gap-1">
         <NavButton
           disabled={!activeTab.canGoBack}
@@ -318,6 +346,7 @@ const Toolbar = () => {
 
       <div className="flex-1 min-w-0 flex items-center relative">
         <div
+          data-address-bar
           className={`
             relative flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded-full
                 border border-input bg-muted
