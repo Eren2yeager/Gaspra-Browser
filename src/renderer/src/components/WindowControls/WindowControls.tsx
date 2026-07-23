@@ -3,7 +3,7 @@ import { Minus, Square, X } from 'lucide-react'
 
 const WindowControls = () => {
   const [isMaximized, setIsMaximized] = useState(false)
-  const isWindows = navigator.userAgent.includes('Windows')
+  // const isWindows = navigator.userAgent.includes('Windows')
 
   const refreshIsMaximized = async () => {
     const response = await window.browserAPI.isWindowMaximized()

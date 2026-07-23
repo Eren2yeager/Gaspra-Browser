@@ -52,10 +52,71 @@ declare global {
       getTabs: () => Promise<{ success: boolean; tabs?: any[]; error?: string }>
       saveTabs: (tabs: any[]) => Promise<{ success: boolean; error?: string }>
       clearTabs: () => Promise<{ success: boolean; error?: string }>
+      // WebContentsView tab ops
+      getTabViewInit: () => Promise<{
+        success: boolean
+        init?: {
+          tabs: Array<{
+            id: number
+            title: string
+            url: string
+            isLoading: boolean
+            canGoBack: boolean
+            canGoForward: boolean
+          }>
+          activeTabId: number
+        } | null
+        skipRestore?: boolean
+      }>
+      setTabViewsOccluded: (occluded: boolean) => Promise<{ success: boolean }>
+      setTabViewBounds: (bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      }) => Promise<{ success: boolean }>
+      ensureTabView: (tabId: number, url: string) => Promise<{ success: boolean }>
+      destroyTabView: (tabId: number) => Promise<{ success: boolean }>
+      setActiveTabView: (tabId: number | null) => Promise<{ success: boolean }>
+      navigateTabView: (tabId: number, url: string) => Promise<{ success: boolean }>
+      goBackTabView: (tabId: number) => Promise<{ success: boolean }>
+      goForwardTabView: (tabId: number) => Promise<{ success: boolean }>
+      reloadTabView: (tabId: number) => Promise<{ success: boolean }>
+      reloadTabViewIgnoringCache: (tabId: number) => Promise<{ success: boolean }>
+      stopTabView: (tabId: number) => Promise<{ success: boolean }>
+      tearOffTabView: (payload: {
+        tabId: number
+        tab: {
+          id: number
+          title: string
+          url: string
+          isLoading: boolean
+          canGoBack: boolean
+          canGoForward: boolean
+        }
+        screenX: number
+        screenY: number
+      }) => Promise<{
+        success: boolean
+        mode?: 'attach' | 'new'
+        targetWindowId?: number
+      }>
+      onTabViewUpdated: (
+        cb: (data: { tabId: number; changes: Record<string, unknown> }) => void
+      ) => () => void
+      onTabViewAttached: (
+        cb: (data: { tabId: number; tab: any }) => void
+      ) => () => void
+      onTabViewDetached: (cb: (data: { tabId: number }) => void) => () => void
       // context menu operations
       showContextMenu: (params: any) => void
       showInternalContextMenu: () => void
+      showBrowserMenu: (state: Record<string, unknown>) => void
+      onBrowserMenuAction: (
+        cb: (data: { action: string; value?: unknown }) => void
+      ) => () => void
       onOpenLinkInNewTab: (cb: (url: string) => void) => () => void
+      onKeyboardShortcut: (cb: (data: { action: string }) => void) => () => void
     }
   }
 }

@@ -9,6 +9,11 @@
   }
 }
 
+body ::selection {
+  background-color: var(--);
+  color: var(--selection-text);
+}
+
 .gaspra-progress-indicator {
   animation: gaspra-progress 1.1s ease-in-out infinite;
 }

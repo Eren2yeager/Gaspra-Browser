@@ -31,7 +31,7 @@ function pathToFileUrl(filePath: string): string {
 }
 
 export default function NewTabPage() {
-  const { updateTab, activeTabId, tabs, setActiveTab } = useBrowser()
+  const { navigateTab, activeTabId, tabs, setActiveTab } = useBrowser()
   const { settings, isLoading } = useSettings()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -49,7 +49,7 @@ export default function NewTabPage() {
       }
     }
 
-    updateTab(activeTabId, { url, requestedUrl: url, title: url })
+    navigateTab(activeTabId, url)
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -91,8 +91,8 @@ export default function NewTabPage() {
 
       {/* Content */}
       <div className="relative z-10 w-full flex flex-col items-center">
-        <AppIcon size={100} className="mb-4" />
-        <h1 className="text-3xl font-bold mb-8">Gaspra Browser</h1>
+        <AppIcon size={120} className="mb-4" />
+        <h1 className="text-3xl font-bold mb-8 ">Gaspra Browser</h1>
         <div className="w-full max-w-3xl px-6">
           <form onSubmit={handleSearch} className="w-full">
             <div className="relative w-full">

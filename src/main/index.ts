@@ -3,7 +3,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { dbOperations } from './db/index'
 import { createWindow } from './app/window'
 import { registerIpcHandlers } from './app/handlers/index'
-import { createContextMenu } from './app/contextMenu'
+import { registerKeyboardShortcuts, unregisterKeyboardShortcuts } from './app/keyboardShortcuts'
 
 app.commandLine.appendSwitch('ignore-certificate-errors') 
 
@@ -22,14 +22,11 @@ function initializeApp() {
   })
 
   registerIpcHandlers(() => mainWindow)
+  
+  // Register keyboard shortcuts
+  registerKeyboardShortcuts(() => mainWindow)
 
-  app.on('web-contents-created', (_event, contents) => {
-    if (mainWindow && contents.id !== mainWindow.webContents.id) {
-      contents.on('context-menu', (_event, params) => {
-        createContextMenu({ sender: contents } as any, params)
-      })
-    }
-  })
+  // Context menus for tab WebContentsViews are wired in tabViews.ts
 
   mainWindow = createWindow()
 
@@ -46,6 +43,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Unregister shortcuts when app quits
+app.on('will-quit', () => {
+  unregisterKeyboardShortcuts()
 })
 
 

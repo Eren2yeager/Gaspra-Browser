@@ -10,38 +10,40 @@ import { HistoryProvider } from './context/HistoryContext'
 import { DownloadProvider } from './context/DownloadContext'
 import { SearchHistoryProvider } from './context/SearchHistoryContext'
 import { SettingsProvider } from './context/SettingsContext'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 
-function App() {
-  // Handle context menu for internal pages
+function AppContent() {
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts()
+
+  // Handle context menu for internal chrome pages (WebContentsViews handle their own)
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
-      // Check if the event originated from or is within a webview
-      let isWebview = false
-      let element = e.target as HTMLElement | null
-      while (element) {
-        if (element.tagName === 'WEBVIEW') {
-          isWebview = true
-          break
-        }
-        element = element.parentElement
-      }
-      
-      // Only handle internal pages (non-webview)
-      if (!isWebview) {
-        e.preventDefault()
-        window.browserAPI.showInternalContextMenu()
-      }
+      e.preventDefault()
+      window.browserAPI.showInternalContextMenu()
     }
 
-    // Add event listener to the document
     document.addEventListener('contextmenu', handleContextMenu)
 
-    // Cleanup
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu)
     }
   }, [])
 
+  return (
+    <div className="flex flex-col h-screen w-screen bg-background text-foreground overflow-hidden">
+      <TabBar />
+      <Toolbar />
+      <LoadingProgressBar />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <WebView />
+      </div>
+    </div>
+  )
+}
+
+function App() {
   return (
     <SettingsProvider>
       <BrowserProvider>
@@ -49,15 +51,7 @@ function App() {
           <HistoryProvider>
             <DownloadProvider>
               <SearchHistoryProvider>
-                <div className="flex flex-col h-screen w-screen bg-background text-foreground overflow-hidden">
-                  <TabBar />
-                  <Toolbar />
-                  <LoadingProgressBar />
-                  <div className="flex flex-1 overflow-hidden">
-                    <Sidebar />
-                    <WebView />
-                  </div>
-                </div>
+                <AppContent />
               </SearchHistoryProvider>
             </DownloadProvider>
           </HistoryProvider>

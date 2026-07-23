@@ -2,36 +2,48 @@ import { BrowserWindow } from 'electron'
 import { join } from 'path'
 import icon from '../../../resources/icon.png?asset'
 import { setupDownloadListeners } from './downloads'
+import { registerWindowForTabs, setPendingWindowInit, type TabViewSnapshot } from './tabViews'
 
-export function createWindow(): BrowserWindow {
+let downloadsWired = false
+
+export type CreateWindowOptions = {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  pendingInit?: { tabs: TabViewSnapshot[]; activeTabId: number }
+}
+
+export function createWindow(options: CreateWindowOptions = {}): BrowserWindow {
   const windowIcon = process.platform === 'win32' ? join(process.cwd(), 'build', 'icon.ico') : icon
 
   const win = new BrowserWindow({
-    width: 1380,
-    height: 800,
+    width: options.width ?? 1380,
+    height: options.height ?? 800,
+    x: options.x,
+    y: options.y,
     show: false,
     titleBarStyle: 'hidden',
-    // ...(process.platform === 'win32'
-    //   ? {
-    //       titleBarOverlay: {
-    //         color: '#02050D',
-    //         symbolColor: '#d4d4d8',
-    //         height: 40
-    //       }
-    //     }
-    //   : {}),
     autoHideMenuBar: true,
     ...(process.platform === 'linux' || process.platform === 'win32' ? { icon: windowIcon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      webviewTag: true,
-      webSecurity: false,
-      // allowFileAccessFromFiles: true
+      webSecurity: false
     }
   })
 
-  setupDownloadListeners(win)
+  // ponytail: session listener once — multi-window shares defaultSession
+  if (!downloadsWired) {
+    setupDownloadListeners(win)
+    downloadsWired = true
+  }
+
+  registerWindowForTabs(win)
+
+  if (options.pendingInit) {
+    setPendingWindowInit(win, options.pendingInit.tabs, options.pendingInit.activeTabId)
+  }
 
   win.on('ready-to-show', () => {
     win.show()

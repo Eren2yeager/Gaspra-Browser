@@ -8,8 +8,10 @@ import { searchHistoryAPI } from './api/searchHistory'
 import { windowAPI } from './api/window'
 import { settingsAPI } from './api/settings'
 import { tabsAPI } from './api/tabs'
+import { tabViewsAPI } from './api/tabViews'
 import { contextMenuAPI } from './api/contextMenu'
 import { quickLinksAPI } from './api/quickLinks'
+import { keyboardShortcutsAPI } from './api/keyboardShortcuts'
 
 const browserAPI = {
   ...bookmarksAPI,
@@ -20,8 +22,10 @@ const browserAPI = {
   ...windowAPI,
   ...settingsAPI,
   ...tabsAPI,
+  ...tabViewsAPI,
   ...contextMenuAPI,
-  ...quickLinksAPI
+  ...quickLinksAPI,
+  ...keyboardShortcutsAPI
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

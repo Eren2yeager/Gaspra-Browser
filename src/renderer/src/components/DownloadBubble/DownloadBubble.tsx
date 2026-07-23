@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useDownload } from '../../context/DownloadContext'
 import { useBrowser } from '../../context/BrowserContext'
 import {
@@ -75,6 +75,7 @@ export default function DownloadBubble() {
   const { downloads, pauseDownload, resumeDownload, cancelDownload, deleteDownload } =
     useDownload()
   const { addTab } = useBrowser()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const activeDownloads = downloads.filter((d) => d.state === 'progressing' || d.state === 'paused')
   const recentDownloads = downloads.slice(0, 5)
@@ -90,10 +91,10 @@ export default function DownloadBubble() {
   if (downloads.length === 0) return null
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <button
-          className="relative flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none"
+          className="relative flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-primary/20 hover:text-primary transition-colors focus-visible:outline-none"
           aria-label="Downloads"
         >
           {activeDownloads.length > 0 && <CircularProgress progress={overallProgress} size={36} />}

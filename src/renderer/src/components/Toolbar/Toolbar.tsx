@@ -15,13 +15,7 @@ import {
   Star,
   Home,
   Clock,
-  Settings as SettingsIcon,
-  History,
-  Download,
-  Plus,
   MoreVertical,
-  Eraser,
-  Globe,
   ChevronDown
 } from 'lucide-react'
 import DownloadBubble from '../DownloadBubble/DownloadBubble'
@@ -31,13 +25,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from '../ui/dropdown-menu'
 
@@ -57,7 +45,8 @@ function getSearchUrl(searchEngine: string, query: string): string {
 }
 
 const Toolbar = () => {
-  const { addTab, tabs, activeTabId, updateTab, webviewRefs, setActiveTab } = useBrowser()
+  const { addTab, tabs, activeTabId, navigateTab, setActiveTab, goBack, goForward, reload } =
+    useBrowser()
   const { bookmarks, addBookmark, deleteBookmark, toggleSidebar, isSidebarOpen } = useBookmark()
   const { searchHistory, addSearch, clearSearchHistory, deleteSearch } = useSearchHistory()
   const { settings, updateSetting, resetSettings } = useSettings()
@@ -161,8 +150,7 @@ const Toolbar = () => {
       }
     }
 
-    updateTab(activeTab.id, { url: finalUrl, requestedUrl: finalUrl, title: finalUrl })
-    // Update inputValue to match new URL
+    navigateTab(activeTab.id, finalUrl)
     setInputValue(finalUrl)
     setIsEditing(false)
     setShowDropdown(false)
@@ -194,50 +182,117 @@ const Toolbar = () => {
     }
   }
 
-  const handleBack = () => {
-    const webview = webviewRefs.current[activeTabId!]
-    if (webview) {
-      try {
-        if (webview.canGoBack()) webview.goBack()
-      } catch (_err) {
-        // Ignore errors
-      }
-    }
-  }
-
-  const handleForward = () => {
-    const webview = webviewRefs.current[activeTabId!]
-    if (webview) {
-      try {
-        if (webview.canGoForward()) webview.goForward()
-      } catch (_err) {
-        // Ignore errors
-      }
-    }
-  }
-
-  const handleReload = () => {
-    const webview = webviewRefs.current[activeTabId!]
-    if (webview) {
-      try {
-        if (webview.isLoading()) {
-          webview.stop()
-        } else {
-          webview.reload()
-        }
-      } catch (_err) {
-        // Ignore errors
-      }
-    }
-  }
+  const handleBack = () => goBack()
+  const handleForward = () => goForward()
+  const handleReload = () => reload()
 
   const handleHome = () => {
     const homepage = settings?.homepage || 'gaspra://newtab'
-    updateTab(activeTabId!, { url: homepage, requestedUrl: homepage, title: homepage })
+    navigateTab(activeTabId!, homepage)
   }
 
-  if (!activeTab) return null
+  const openBrowserMenu = () => {
+    window.browserAPI.showBrowserMenu({
+      isSidebarOpen,
+      isBookmarked,
+      defaultSearchEngine: settings?.defaultSearchEngine || 'google',
+      saveHistory: settings?.saveHistory ?? false,
+      saveSearchHistory: settings?.saveSearchHistory ?? false,
+      saveDownloadHistory: settings?.saveDownloadHistory ?? false,
+      askWhereToSave: settings?.askWhereToSave ?? false,
+      saveTabsOnClose: settings?.saveTabsOnClose ?? false,
+      blockPopups: settings?.blockPopups ?? false,
+      enableJavaScript: settings?.enableJavaScript ?? false,
+      enableImages: settings?.enableImages ?? false,
+      hardwareAcceleration: settings?.hardwareAcceleration ?? false
+    })
+  }
 
+  useEffect(() => {
+    const unsub = window.browserAPI.onBrowserMenuAction(({ action, value }) => {
+      switch (action) {
+        case 'new-tab':
+          addTab()
+          break
+        case 'home':
+          handleHome()
+          break
+        case 'open-downloads':
+          openInternalPage('downloads')
+          break
+        case 'open-history':
+          openInternalPage('history')
+          break
+        case 'open-settings':
+          openInternalPage('settings')
+          break
+        case 'toggle-sidebar':
+          if (typeof value === 'boolean') {
+            if (value !== isSidebarOpen) toggleSidebar()
+          } else {
+            toggleSidebar()
+          }
+          break
+        case 'toggle-bookmark':
+          handleToggleBookmark()
+          break
+        case 'set-search-engine':
+          if (
+            value === 'google' ||
+            value === 'bing' ||
+            value === 'duckduckgo' ||
+            value === 'yahoo'
+          ) {
+            updateSetting('defaultSearchEngine', value)
+          }
+          break
+        case 'set-save-history':
+          updateSetting('saveHistory', Boolean(value))
+          break
+        case 'set-save-search-history':
+          updateSetting('saveSearchHistory', Boolean(value))
+          break
+        case 'set-save-download-history':
+          updateSetting('saveDownloadHistory', Boolean(value))
+          break
+        case 'set-ask-where-to-save':
+          updateSetting('askWhereToSave', Boolean(value))
+          break
+        case 'set-save-tabs-on-close':
+          updateSetting('saveTabsOnClose', Boolean(value))
+          break
+        case 'set-block-popups':
+          updateSetting('blockPopups', Boolean(value))
+          break
+        case 'set-enable-javascript':
+          updateSetting('enableJavaScript', Boolean(value))
+          break
+        case 'set-enable-images':
+          updateSetting('enableImages', Boolean(value))
+          break
+        case 'set-hardware-acceleration':
+          updateSetting('hardwareAcceleration', Boolean(value))
+          break
+        case 'clear-history':
+          clearHistory()
+          break
+        case 'clear-search-history':
+          clearSearchHistory()
+          break
+        case 'clear-download-history':
+          clearDownloads()
+          break
+        case 'reset-settings':
+          resetSettings()
+          break
+        default:
+          break
+      }
+    })
+    return unsub
+  })
+
+  if (!activeTab) return null
   return (
     <div className="flex items-center gap-2 px-2 py-2 bg-primary/10">
       <div className="flex items-center gap-1">
@@ -417,7 +472,7 @@ const Toolbar = () => {
                 ${
                   isBookmarked
                     ? 'text-primary hover:bg-primary/20'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-primary/20 hover:text-primary'
                 }
               `}
               aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
@@ -468,177 +523,14 @@ const Toolbar = () => {
 
       <DownloadBubble />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className="p-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            aria-label="Browser menu"
-            title="Browser menu"
-          >
-            <MoreVertical size={18} />
-          </button>
-        </DropdownMenuTrigger>
-
-        <DropdownMenuContent align="end" className="w-72">
-          <DropdownMenuLabel>Browser Menu</DropdownMenuLabel>
-
-          <DropdownMenuItem onClick={() => addTab()}>
-            <Plus />
-            New tab
-            <DropdownMenuShortcut>Ctrl+T</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleHome}>
-            <Home />
-            Go to homepage
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openInternalPage('downloads')}>
-            <Download />
-            Downloads
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openInternalPage('history')}>
-            <History />
-            History
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openInternalPage('settings')}>
-            <SettingsIcon />
-            Settings
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuCheckboxItem checked={isSidebarOpen} onCheckedChange={toggleSidebar}>
-            {/* <PanelLeft /> */}
-            Show bookmarks sidebar
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem checked={isBookmarked} onCheckedChange={handleToggleBookmark}>
-            {/* <Bookmark /> */}
-            Bookmark this page
-          </DropdownMenuCheckboxItem>
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <Globe />
-              Search engine
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuCheckboxItem
-                checked={settings?.defaultSearchEngine === 'google'}
-                onCheckedChange={() => updateSetting('defaultSearchEngine', 'google')}
-              >
-                Google
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.defaultSearchEngine === 'bing'}
-                onCheckedChange={() => updateSetting('defaultSearchEngine', 'bing')}
-              >
-                Bing
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.defaultSearchEngine === 'duckduckgo'}
-                onCheckedChange={() => updateSetting('defaultSearchEngine', 'duckduckgo')}
-              >
-                DuckDuckGo
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.defaultSearchEngine === 'yahoo'}
-                onCheckedChange={() => updateSetting('defaultSearchEngine', 'yahoo')}
-              >
-                Yahoo
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <SettingsIcon />
-              Quick settings
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-64">
-              <DropdownMenuCheckboxItem
-                checked={settings?.saveHistory ?? false}
-                onCheckedChange={(checked) => updateSetting('saveHistory', checked)}
-              >
-                Save browsing history
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.saveSearchHistory ?? false}
-                onCheckedChange={(checked) => updateSetting('saveSearchHistory', checked)}
-              >
-                Save search history
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.saveDownloadHistory ?? false}
-                onCheckedChange={(checked) => updateSetting('saveDownloadHistory', checked)}
-              >
-                Save download history
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.askWhereToSave ?? false}
-                onCheckedChange={(checked) => updateSetting('askWhereToSave', checked)}
-              >
-                Ask where to save files
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.saveTabsOnClose ?? false}
-                onCheckedChange={(checked) => updateSetting('saveTabsOnClose', checked)}
-              >
-                Restore tabs on reopen
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.blockPopups ?? false}
-                onCheckedChange={(checked) => updateSetting('blockPopups', checked)}
-              >
-                Block popups
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.enableJavaScript ?? false}
-                onCheckedChange={(checked) => updateSetting('enableJavaScript', checked)}
-              >
-                Enable JavaScript
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.enableImages ?? false}
-                onCheckedChange={(checked) => updateSetting('enableImages', checked)}
-              >
-                Load images
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={settings?.hardwareAcceleration ?? false}
-                onCheckedChange={(checked) => updateSetting('hardwareAcceleration', checked)}
-              >
-                Hardware acceleration
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <Eraser />
-              Clear browsing data
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-56">
-              <DropdownMenuItem onClick={() => clearHistory()}>
-                Clear history
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => clearSearchHistory()}>
-                Clear search history
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => clearDownloads()}>
-                Clear download history
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-
-          <DropdownMenuItem onClick={() => resetSettings()}>
-            <SettingsIcon />
-            Reset all settings
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <button
+        onClick={openBrowserMenu}
+        className="p-2 rounded-md text-muted-foreground hover:bg-primary/20 hover:text-primary transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        aria-label="Browser menu"
+        title="Browser menu"
+      >
+        <MoreVertical size={18} />
+      </button>
     </div>
   )
 }
@@ -659,7 +551,7 @@ const NavButton = ({
     disabled={disabled}
     className="
       p-2 rounded-md text-muted-foreground
-      hover:bg-accent hover:text-accent-foreground
+      hover:bg-primary/20 hover:text-primary
       disabled:opacity-30
       transition-colors duration-200
       focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring

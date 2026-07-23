@@ -13,7 +13,7 @@ interface Bookmark {
 export default function Sidebar () : JSX.Element {
   const { isSidebarOpen, bookmarks, deleteBookmark, addBookmark, setIsSidebarOpen } = useBookmark()
 
-  const { activeTabId, tabs, updateTab } = useBrowser()
+  const { activeTabId, tabs, navigateTab } = useBrowser()
 
   // Local state for filtering bookmarks
   const [searchQuery, setSearchQuery] = useState('')
@@ -29,9 +29,7 @@ export default function Sidebar () : JSX.Element {
 
   const handleNavigate = (url: string) : void   => {
     if (!activeTabId) return
-
-    // Update the active tab's state (updates the address bar)
-    updateTab(activeTabId, { url, requestedUrl: url, title: url })
+    navigateTab(activeTabId, url)
   }
 
   const handleAddCurrentPage = () : void => {

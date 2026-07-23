@@ -6,7 +6,7 @@ import {AppIcon} from '../CustomIcons/AppIcon'
 
 export default function HistoryPage() {
   const { groupedHistory, clearHistory, deleteHistoryItem } = useHistory()
-  const { activeTabId, updateTab, webviewRefs, tabs, setActiveTab } = useBrowser()
+  const { activeTabId, navigateTab, tabs, setActiveTab } = useBrowser()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
   const [isSelectMode, setIsSelectMode] = useState(false)
@@ -49,9 +49,7 @@ export default function HistoryPage() {
       }
     }
 
-    updateTab(activeTabId, { url, requestedUrl: url, title: url })
-    const webview = webviewRefs.current[activeTabId]
-    if (webview) webview.loadURL(url)
+    navigateTab(activeTabId, url)
   }
 
   const formatDateGroup = (dateString: string) => {

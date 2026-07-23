@@ -88,6 +88,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       mediaQuery.addEventListener('change', handleSystemThemeChange)
       return () => mediaQuery.removeEventListener('change', handleSystemThemeChange)
     }
+    return () => {}
+
   }, [settings?.theme, settings?.accentColor])
 
   // Load settings on mount
